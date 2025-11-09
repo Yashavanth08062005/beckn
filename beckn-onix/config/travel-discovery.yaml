@@ -1,4 +1,4 @@
-appName: "onix-local"
+appName: "travel-discovery-onix"
 log:
   level: debug
   destinations:
@@ -17,6 +17,7 @@ http:
 pluginManager:
   root: ./plugins
 modules:
+  # BAP Transaction Receiver (receives responses from BPPs)
   - name: bapTxnReceiver
     path: /bap/receiver/
     handler:
@@ -28,45 +29,28 @@ modules:
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
       plugins:
-        registry:
-          id: registry
-          config:
-            url: http://registry:3030/subscribers
-            retry_max: 3
-            retry_wait_min: 100ms
-            retry_wait_max: 500ms
         keyManager:
           id: simplekeymanager
           config:
-            networkParticipant: bap-network
-            keyId: bap-network-key
+            networkParticipant: travel-discovery-bap
+            keyId: travel-discovery-bap-key
             signingPrivateKey: uc5WYG/eke0PVGyQ9JNVLpwQL0K9JIZfHfqUHdLBTaY=
             signingPublicKey: UX1EDpL4YHOnfkuhrtS+Bz18qwidrX+oJxButD8xaCE=
             encrPrivateKey: uc5WYG/eke0PVGyQ9JNVLpwQL0K9JIZfHfqUHdLBTaY=
             encrPublicKey: UX1EDpL4YHOnfkuhrtS+Bz18qwidrX+oJxButD8xaCE=
-        cache:
-          id: cache
-          config:
-            addr: redis:6379
-        schemaValidator:
-          id: schemavalidator
-          config:
-            schemaDir: ./schemas
-        signValidator:
-          id: signvalidator
         router:
           id: router
           config:
-            routingConfig: ./config/local-simple-routing.yaml
+            routingConfig: ./config/travel-discovery-routing.yaml
         middleware:
           - id: reqpreprocessor
             config:
               uuidKeys: transaction_id,message_id
               role: bap
       steps:
-        - validateSign
         - addRoute
-  
+
+  # BAP Transaction Caller (sends requests to BPPs)
   - name: bapTxnCaller
     path: /bap/caller/
     handler:
@@ -78,30 +62,19 @@ modules:
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
       plugins:
-        registry:
-          id: registry
-          config:
-            url: http://registry:3030/subscribers
-            retry_max: 3
-            retry_wait_min: 100ms
-            retry_wait_max: 500ms
         keyManager:
           id: simplekeymanager
           config:
-            networkParticipant: bap-network
-            keyId: bap-network-key
+            networkParticipant: travel-discovery-bap
+            keyId: travel-discovery-bap-key  
             signingPrivateKey: uc5WYG/eke0PVGyQ9JNVLpwQL0K9JIZfHfqUHdLBTaY=
             signingPublicKey: UX1EDpL4YHOnfkuhrtS+Bz18qwidrX+oJxButD8xaCE=
             encrPrivateKey: uc5WYG/eke0PVGyQ9JNVLpwQL0K9JIZfHfqUHdLBTaY=
             encrPublicKey: UX1EDpL4YHOnfkuhrtS+Bz18qwidrX+oJxButD8xaCE=
-        cache:
-          id: cache
-          config:
-            addr: redis:6379
         router:
           id: router
           config:
-            routingConfig: ./config/local-simple-routing-BAPCaller.yaml
+            routingConfig: ./config/travel-discovery-bap-routing.yaml
         signer:
           id: signer
         middleware:
@@ -112,8 +85,9 @@ modules:
       steps:
         - addRoute
         - sign
-  
-  - name: bppTxnReceiver
+
+  # BPP Transaction Receiver (receives requests from BAP)
+  - name: bppTxnReceiver  
     path: /bpp/receiver/
     handler:
       type: std
@@ -124,42 +98,25 @@ modules:
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
       plugins:
-        registry:
-          id: registry
-          config:
-            url: http://registry:3030/subscribers
-            retry_max: 3
-            retry_wait_min: 100ms
-            retry_wait_max: 500ms
         keyManager:
           id: simplekeymanager
           config:
-            networkParticipant: bpp-network
-            keyId: bpp-network-key
+            networkParticipant: travel-discovery-bpp
+            keyId: travel-discovery-bpp-key
             signingPrivateKey: uc5WYG/eke0PVGyQ9JNVLpwQL0K9JIZfHfqUHdLBTaY=
             signingPublicKey: 8CANv4rto7u6RZEB9b6z6mXIIfBLlExIRLBLd5YYl/Y=
             encrPrivateKey: uc5WYG/eke0PVGyQ9JNVLpwQL0K9JIZfHfqUHdLBTaY=
             encrPublicKey: 8CANv4rto7u6RZEB9b6z6mXIIfBLlExIRLBLd5YYl/Y=
-        cache:
-          id: cache
-          config:
-            addr: redis:6379
-        schemaValidator:
-          id: schemavalidator
-          config:
-            schemaDir: ./schemas
-        signValidator:
-          id: signvalidator
         router:
           id: router
           config:
-            routingConfig: ./config/local-simple-routing-BPPReceiver.yaml
+            routingConfig: ./config/travel-discovery-routing.yaml
       steps:
-        - validateSign
         - addRoute
-  
+
+  # BPP Transaction Caller (sends responses back to BAP)
   - name: bppTxnCaller
-    path: /bpp/caller/
+    path: /bpp/caller/  
     handler:
       type: std
       role: bpp
@@ -169,30 +126,19 @@ modules:
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
       plugins:
-        registry:
-          id: registry
-          config:
-            url: http://registry:3030/subscribers
-            retry_max: 3
-            retry_wait_min: 100ms
-            retry_wait_max: 500ms
         keyManager:
           id: simplekeymanager
           config:
-            networkParticipant: bpp-network
-            keyId: bpp-network-key
+            networkParticipant: travel-discovery-bpp
+            keyId: travel-discovery-bpp-key
             signingPrivateKey: uc5WYG/eke0PVGyQ9JNVLpwQL0K9JIZfHfqUHdLBTaY=
             signingPublicKey: 8CANv4rto7u6RZEB9b6z6mXIIfBLlExIRLBLd5YYl/Y=
             encrPrivateKey: uc5WYG/eke0PVGyQ9JNVLpwQL0K9JIZfHfqUHdLBTaY=
             encrPublicKey: 8CANv4rto7u6RZEB9b6z6mXIIfBLlExIRLBLd5YYl/Y=
-        cache:
-          id: cache
-          config:
-            addr: redis:6379
         router:
           id: router
           config:
-            routingConfig: ./config/local-simple-routing.yaml
+            routingConfig: ./config/travel-discovery-routing.yaml
         signer:
           id: signer
       steps:

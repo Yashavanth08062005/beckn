@@ -1,6 +1,6 @@
 module github.com/beckn-one/beckn-onix
 
-go 1.24.0
+go 1.23
 
 require (
 	github.com/kr/pretty v0.3.1 // indirect
