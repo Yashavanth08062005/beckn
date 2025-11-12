@@ -125,7 +125,14 @@ export const searchTravelOptions = async (searchData) => {
     if (error.code === 'ECONNREFUSED') {
       throw new Error('Unable to connect to travel service. Please ensure BAP is running on port 8080.');
     }
-    
+
+    // axios throws a generic "Network Error" (no response) for CORS failures,
+    // DNS failures, or when the backend is not reachable. Surface a clearer
+    // troubleshooting message for those cases.
+    if (error.message === 'Network Error' || !error.response) {
+      throw new Error('Unable to connect to travel service. Check that BAP is running on http://localhost:8080 and that CORS/networking allows requests from the frontend (http://localhost:3000).');
+    }
+
     if (error.response?.status === 500) {
       const errorMessage = error.response?.data?.error?.message || 
                           error.response?.data?.message ||
@@ -196,6 +203,7 @@ const transformBecknItem = (item, provider, transportMode) => {
   const baseItem = {
     id: item.id,
     provider: provider.descriptor?.name || 'Provider',
+    providerId: provider.id,
     price: parseFloat(item.price?.value || 0),
     currency: item.price?.currency || 'INR',
     travelMode: transportMode,
@@ -204,30 +212,41 @@ const transformBecknItem = (item, provider, transportMode) => {
   if (transportMode === 'flight') {
     return {
       ...baseItem,
-      airline: item.descriptor?.name,
-      flightNumber: item.descriptor?.code,
-      aircraft: getTagValue(item.tags, 'AIRCRAFT_TYPE', 'MODEL'),
-      duration: '2h 30m', // Default - would be calculated from timings
+      details: {
+        airline: item.descriptor?.name,
+        flightNumber: item.descriptor?.code,
+        airlineCode: provider.descriptor?.code || provider.id,
+        aircraft: getTagValue(item.tags, 'AIRCRAFT_TYPE', 'MODEL'),
+        duration: '2h 30m', // Default - would be calculated from timings
+        departureTime: item.time?.timestamp || new Date().toISOString(),
+        arrivalTime: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(), // Add 2.5 hours
+        amenities: extractAmenities(item.tags),
+        baggage: getTagValue(item.tags, 'AMENITIES', 'BAGGAGE') || '20kg',
+        description: item.descriptor?.long_desc || item.descriptor?.short_desc,
+      },
       timings: {
         departure: item.time?.timestamp || new Date().toISOString(),
-        arrival: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString() // Add 2.5 hours
-      },
-      amenities: extractAmenities(item.tags),
-      baggage: getTagValue(item.tags, 'AMENITIES', 'BAGGAGE') || '20kg',
-      description: item.descriptor?.long_desc || item.descriptor?.short_desc
+        arrival: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString()
+      }
     };
   } else if (transportMode === 'hotel') {
     return {
       ...baseItem,
-      name: item.descriptor?.name,
-      type: getTagValue(item.tags, 'ROOM_TYPE', 'TYPE') || 'Standard Room',
-      size: getTagValue(item.tags, 'ROOM_TYPE', 'SIZE'),
-      bed: getTagValue(item.tags, 'ROOM_TYPE', 'BED'),
-      amenities: extractAmenities(item.tags),
-      policies: extractPolicies(item.tags),
-      rating: 4.2, // Mock rating
-      images: item.descriptor?.images || [],
-      description: item.descriptor?.long_desc || item.descriptor?.short_desc
+      details: {
+        name: item.descriptor?.name,
+        hotelId: item.id,
+        type: getTagValue(item.tags, 'ROOM_TYPE', 'TYPE') || 'Standard Room',
+        size: getTagValue(item.tags, 'ROOM_TYPE', 'SIZE'),
+        bedType: getTagValue(item.tags, 'ROOM_TYPE', 'BED'),
+        amenities: extractAmenities(item.tags),
+        policies: extractPolicies(item.tags),
+        rating: 4.2, // Mock rating
+        images: item.descriptor?.images || [],
+        description: item.descriptor?.long_desc || item.descriptor?.short_desc
+      },
+      // For hotels, use the time field as check-in/check-out placeholders
+      checkIn: item.time?.timestamp,
+      checkOut: item.time?.timestamp
     };
   }
 

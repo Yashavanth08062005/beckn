@@ -77,12 +77,25 @@ class BecknService {
                 }
             };
 
-            // Send to ONIX adapter
-            const onixResponse = await this.sendToONIX('/search', becknRequest);
-            
-            // For now, return the ONIX response
-            // In production, this would aggregate responses from multiple BPPs
-            return onixResponse.data;
+            // Route request to the appropriate backend depending on category
+            const categoryId = message.intent?.category?.id || '';
+
+            // Prefer direct BPP calls for development: flights BPP and hotels BPP
+            if (categoryId.toUpperCase() === 'MOBILITY') {
+                // Flights
+                const flightsBppUrl = env.FLIGHTS_BPP_URL || 'http://localhost:7001';
+                const resp = await this.sendToBPP(flightsBppUrl, '/search', becknRequest);
+                return resp.data;
+            } else if (categoryId.toUpperCase() === 'HOSPITALITY') {
+                // Hotels
+                const hotelsBppUrl = env.HOTELS_BPP_URL || 'http://localhost:7003';
+                const resp = await this.sendToBPP(hotelsBppUrl, '/search', becknRequest);
+                return resp.data;
+            } else {
+                // Fallback to ONIX adapter (aggregator)
+                const onixResponse = await this.sendToONIX('/search', becknRequest);
+                return onixResponse.data;
+            }
 
         } catch (error) {
             logger.error('Error processing search:', error);
@@ -229,6 +242,50 @@ class BecknService {
             }
             
             throw new Error(`Failed to communicate with ONIX adapter: ${error.message}`);
+        }
+    }
+
+    /**
+     * Send request to a specific BPP (flights/hotels)
+     */
+    async sendToBPP(baseUrl, endpoint, becknRequest) {
+        try {
+            const url = `${baseUrl}${endpoint}`;
+            logger.info(`Sending request to BPP: ${url}`, {
+                transaction_id: becknRequest.context.transaction_id,
+                message_id: becknRequest.context.message_id
+            });
+
+            const response = await axios.post(url, becknRequest, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                timeout: 30000
+            });
+
+            logger.info(`Received response from BPP: ${response.status}`);
+            return response;
+
+        } catch (error) {
+            logger.error('Error communicating with BPP:', {
+                message: error.message,
+                code: error.code,
+                url: error.config?.url,
+                status: error.response?.status,
+                data: error.response?.data
+            });
+
+            if (error.code === 'ECONNREFUSED') {
+                const message = `Cannot connect to BPP at ${baseUrl}. Make sure the service is running and accessible.`;
+                logger.error(message);
+                throw new Error(message);
+            }
+
+            if (error.response?.data?.error?.message) {
+                throw new Error(error.response.data.error.message);
+            }
+
+            throw new Error(`Failed to communicate with BPP at ${baseUrl}: ${error.message}`);
         }
     }
 }
