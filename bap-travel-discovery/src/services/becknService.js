@@ -206,13 +206,29 @@ class BecknService {
             return response;
 
         } catch (error) {
+            logger.error('Error communicating with ONIX:', {
+                message: error.message,
+                code: error.code,
+                url: error.config?.url,
+                status: error.response?.status,
+                data: error.response?.data
+            });
+
             if (error.code === 'ECONNREFUSED') {
-                logger.error('Cannot connect to ONIX adapter. Make sure it\'s running on ' + this.onixBaseUrl);
-                throw new Error('ONIX adapter not available');
+                const message = `Cannot connect to ONIX adapter at ${this.onixBaseUrl}. Make sure ONIX is running and accessible.`;
+                logger.error(message);
+                throw new Error(message);
             }
             
-            logger.error('Error communicating with ONIX:', error.message);
-            throw error;
+            if (error.response?.status === 404) {
+                throw new Error(`ONIX endpoint not found: ${error.config?.url}`);
+            }
+
+            if (error.response?.data?.error?.message) {
+                throw new Error(error.response.data.error.message);
+            }
+            
+            throw new Error(`Failed to communicate with ONIX adapter: ${error.message}`);
         }
     }
 }

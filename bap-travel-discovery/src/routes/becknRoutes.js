@@ -2,23 +2,18 @@ const express = require('express');
 const router = express.Router();
 const becknController = require('../controllers/becknController');
 
-/**
- * Beckn Protocol Routes for BAP (Beckn Application Platform)
- * These routes handle the standard Beckn discovery and transaction flow
- */
+// Async wrapper to handle async errors
+const asyncHandler = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
 
-// Discovery Phase
-router.post('/search', becknController.search);
+// Health check route
+router.get('/health', asyncHandler(becknController.health));
 
-// Transaction Phase  
-router.post('/select', becknController.select);
-router.post('/init', becknController.init);
-router.post('/confirm', becknController.confirm);
-
-// Post-Transaction Phase
-router.post('/status', becknController.status);
-
-// Health Check
-router.get('/health', becknController.health);
+// Beckn protocol routes
+router.post('/search', asyncHandler(becknController.search));
+router.post('/select', asyncHandler(becknController.select));
+router.post('/init', asyncHandler(becknController.init));
+router.post('/confirm', asyncHandler(becknController.confirm));
+router.post('/status', asyncHandler(becknController.status));
 
 module.exports = router;

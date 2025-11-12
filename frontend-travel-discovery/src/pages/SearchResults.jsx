@@ -133,7 +133,16 @@ const SearchResults = () => {
                   <h3 className="font-bold text-red-900 mb-1">
                     Error Loading Results
                   </h3>
-                  <p className="text-red-700">{error}</p>
+                  <p className="text-red-700 mb-3">{error}</p>
+                  <div className="text-sm text-red-600 bg-red-100 p-3 rounded mt-2">
+                    <p className="font-semibold mb-1">Troubleshooting tips:</p>
+                    <ul className="list-disc list-inside">
+                      <li>Ensure the BAP service is running on port 8080</li>
+                      <li>Check that the ONIX adapter is running</li>
+                      <li>Verify network connectivity</li>
+                      <li>Try refreshing the page</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             ) : filteredResults.length === 0 ? (

@@ -1,7 +1,31 @@
 # Beckn-Based Travel Discovery Engine
 
+✅ **Status**: All services configured and running!
+
 This repository is the base setup for a **Beckn protocol–based travel discovery system**.  
 It uses the open-source [Beckn-ONIX](https://github.com/Beckn-One/beckn-onix) framework as the Beckn adapter layer.
+
+## 🚀 Quick Start (5 minutes)
+
+### Prerequisites
+- Node.js 22+ (or 20.19+)  
+- npm 10+
+- macOS/Linux
+
+### Start All Services
+```bash
+# Option 1: Automatic (Recommended)
+./START.sh
+
+# Option 2: Manual (see below)
+```
+
+### Access the Application
+- **Frontend**: http://localhost:3000
+- **BAP API**: http://localhost:8080
+- **Mock ONIX**: http://localhost:9090
+
+**Note**: Services are now running with Node.js v22.21.1 and include a mock ONIX adapter for development!
 
 ### Purpose
 This project implements a **Single BAP – Multiple BPP** architecture for a unified travel discovery experience across:

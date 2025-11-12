@@ -1,0 +1,79 @@
+# 🚀 QUICK REFERENCE CARD - Start All Services
+
+## Copy & Paste Commands
+
+### Terminal 1: Mock ONIX (Port 9090)
+```bash
+cd beckn-travel-discovery/bap-travel-discovery && source ~/.nvm/nvm.sh && nvm use 22 && node mock-onix-adapter.js
+```
+**Wait for**: `🚀 Mock ONIX Adapter running on http://localhost:9090`
+
+---
+
+### Terminal 2: BAP Service (Port 8080)
+```bash
+cd beckn-travel-discovery/bap-travel-discovery && source ~/.nvm/nvm.sh && nvm use 22 && npm start
+```
+**Wait for**: `🚀 Beckn Travel Discovery BAP is running on http://localhost:8080`
+
+---
+
+### Terminal 3: Frontend (Port 3000)
+```bash
+cd beckn-travel-discovery/frontend-travel-discovery && source ~/.nvm/nvm.sh && nvm use 22 && npm run dev
+```
+**Wait for**: `➜  Local:   http://localhost:3000/`
+
+---
+
+## 🌐 Open Browser
+```
+http://localhost:3000
+```
+
+---
+
+## 🧪 Test Search
+- **Origin**: Delhi
+- **Destination**: Mumbai
+- **Date**: 2025-12-20
+- **Passengers**: 1
+- Click **Search**
+
+---
+
+## 📊 Expected Results
+✅ Air India flights (₹8500, ₹7500)  
+✅ IndiGo flights (₹5500)  
+✅ Taj Hotels options (₹18,000/night)  
+
+---
+
+## 🔍 Verify All Running
+```bash
+curl http://localhost:3000/
+curl http://localhost:8080/health | jq .
+curl http://localhost:9090/health | jq .
+```
+
+---
+
+## ⚠️ Key Points
+- Use **3 separate terminals**
+- Start in order: ONIX → BAP → Frontend
+- Wait for each to start before next
+- Keep all open while testing
+- Check logs if issues: `tail -f bap-travel-discovery/combined.log`
+
+---
+
+## 🛑 Stop All Services
+```bash
+# In any terminal
+pkill -f "node"
+```
+
+---
+
+## 📚 More Info
+See: `START_SERVICES.md` for detailed guide

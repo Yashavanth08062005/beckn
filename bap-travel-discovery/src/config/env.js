@@ -4,7 +4,9 @@ const envConfig = {
     PORT: process.env.PORT || 8080,
     
     // Beckn ONIX Configuration
-    ONIX_URL: process.env.ONIX_URL || 'http://localhost:5000',
+    // For mock testing: http://localhost:9090
+    // For production: http://localhost:8081 or real ONIX URL
+    ONIX_URL: process.env.ONIX_URL || 'http://localhost:9090',
     ONIX_API_KEY: process.env.ONIX_API_KEY || '',
     
     // BAP Configuration

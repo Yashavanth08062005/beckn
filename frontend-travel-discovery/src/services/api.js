@@ -73,6 +73,11 @@ export const searchTravelOptions = async (searchData) => {
   try {
     console.log('🔍 Searching with data:', searchData);
     
+    // Validate search data
+    if (!searchData.transportMode) {
+      throw new Error('Transport mode is required for search');
+    }
+
     // Create Beckn search request
     const becknRequest = {
       context: createBecknContext('search'),
@@ -88,9 +93,15 @@ export const searchTravelOptions = async (searchData) => {
     
     console.log('📥 Received Beckn response:', response.data);
 
+    // Check if response has the expected structure
+    if (!response.data) {
+      throw new Error('Empty response from server');
+    }
+
     // Extract items from Beckn catalog response
     const catalog = response.data?.message?.catalog;
     if (!catalog || !catalog.providers) {
+      console.warn('⚠️ No providers found in catalog');
       return [];
     }
 
@@ -110,11 +121,27 @@ export const searchTravelOptions = async (searchData) => {
   } catch (error) {
     console.error('❌ API Error (searchTravelOptions):', error);
     
+    // Handle specific error types
     if (error.code === 'ECONNREFUSED') {
       throw new Error('Unable to connect to travel service. Please ensure BAP is running on port 8080.');
     }
     
-    throw new Error(error.response?.data?.error?.message || 'Failed to search travel options');
+    if (error.response?.status === 500) {
+      const errorMessage = error.response?.data?.error?.message || 
+                          error.response?.data?.message ||
+                          'Internal server error';
+      throw new Error(`Server error: ${errorMessage}`);
+    }
+
+    if (error.response?.status === 400) {
+      throw new Error(`Invalid request: ${error.response?.data?.error?.message || 'Bad request'}`);
+    }
+
+    if (error.message?.includes('timeout')) {
+      throw new Error('Request timeout. The service is taking too long to respond.');
+    }
+
+    throw new Error(error.response?.data?.error?.message || error.message || 'Failed to search travel options');
   }
 };
 

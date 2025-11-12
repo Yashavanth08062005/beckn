@@ -36,12 +36,12 @@ class BecknController {
             return res.status(200).json(result);
             
         } catch (error) {
-            logger.logError('Error in search controller:', error);
+            logger.error('Error in search controller:', error);
             return res.status(500).json({
                 error: {
                     type: "CORE-ERROR", 
                     code: "20000",
-                    message: "Internal server error"
+                    message: error.message || "Internal server error"
                 }
             });
         }
