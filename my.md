@@ -6,7 +6,7 @@ node mock-onix-adapter.js
 <!-- Terminal 2: BAP Service (Port 8080) -->
 cd beckn-travel-discovery/bap-travel-discovery
 source ~/.nvm/nvm.sh && nvm use 22
-npm start
+source ~/.nvm/nvm.sh && nvm use 22
 
 <!-- Terminal 3: Frontend (Port 3000) -->
 cd beckn-travel-discovery/frontend-travel-discovery
