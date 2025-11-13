@@ -6,28 +6,22 @@ const { v4: uuidv4 } = require('uuid');
  */
 class BecknController {
 
-    /**
-     * Handle search requests - return available hotels
-     */
     async search(req, res) {
         try {
+            console.log('🔍 [SEARCH] Received search request');
             const { context, message } = req.body;
-            
-            console.log('🔍 Hotels BPP received search request:', {
-                transaction_id: context?.transaction_id,
-                bap_id: context?.bap_id
-            });
-
-            // Extract search parameters from Beckn message
-            const intent = message?.intent;
+        
+            console.log('🔍 [SEARCH] Calling searchHotels service');
+            const intent = message?.intent || {};
             const location = intent?.fulfillment?.start?.location?.gps || "12.9716,77.5946";
             const checkInTime = intent?.fulfillment?.time?.range?.start || new Date().toISOString();
             const checkOutTime = intent?.fulfillment?.time?.range?.end || new Date(Date.now() + 86400000).toISOString();
+            
 
-            // Get hotel catalog
             const catalog = await hotelsService.searchHotels(location, checkInTime, checkOutTime);
+            console.log('🔍 [SEARCH] Got catalog, sending response');
+                
 
-            // Create Beckn-compliant response
             const response = {
                 context: {
                     ...context,
@@ -42,20 +36,18 @@ class BecknController {
                 }
             };
 
-            console.log(`🏨 Hotels BPP returning ${catalog.providers[0].items.length} hotel options`);
+            const hotelCount = catalog?.bpp?.providers?.[0]?.items?.length || 0;
+            console.log(`🏨 [SEARCH] Returning ${hotelCount} hotel options`);
             return res.status(200).json(response);
-
+            
         } catch (error) {
-            console.error('Error in hotels search:', error);
+            console.error('❌ [SEARCH] Error:', error.message);
             return res.status(500).json({
-                context: {
-                    ...req.body.context,
-                    action: "on_search"
-                },
+                context: { ...context, action: "on_search" },
                 error: {
                     type: "CORE-ERROR",
                     code: "20000",
-                    message: "Internal server error"
+                    message: error.message || "Internal server error"
                 }
             });
         }

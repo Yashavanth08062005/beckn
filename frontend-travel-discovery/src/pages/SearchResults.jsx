@@ -102,13 +102,27 @@ const SearchResults = () => {
       <div className="max-w-7xl mx-auto px-4">
         {/* Search Summary */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-2">
-            {searchParams.get("origin")} → {searchParams.get("destination")}
-          </h1>
-          <p className="text-gray-600">
-            {searchParams.get("travelDate")} •{" "}
-            {searchParams.get("passengers")} Passenger(s)
-          </p>
+          {searchParams.get("origin") ? (
+            <>
+              <h1 className="text-2xl font-bold mb-2">
+                {searchParams.get("origin")} → {searchParams.get("destination")}
+              </h1>
+              <p className="text-gray-600">
+                {searchParams.get("travelDate")} •{" "}
+                {searchParams.get("passengers")} Passenger(s)
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold mb-2">
+                {searchParams.get("cityCode")}
+              </h1>
+              <p className="text-gray-600">
+                Check-in: {searchParams.get("checkInDate")} • Check-out: {searchParams.get("checkOutDate")} •{" "}
+                {searchParams.get("rooms")} Room(s) • {searchParams.get("passengers")} Guest(s)
+              </p>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -137,7 +151,7 @@ const SearchResults = () => {
                   <div className="text-sm text-red-600 bg-red-100 p-3 rounded mt-2">
                     <p className="font-semibold mb-1">Troubleshooting tips:</p>
                     <ul className="list-disc list-inside">
-                      <li>Ensure the BAP service is running on port 8080</li>
+                      <li>Ensure the BAP service is running on port 8081</li>
                       <li>Check that the ONIX adapter is running</li>
                       <li>Verify network connectivity</li>
                       <li>Try refreshing the page</li>

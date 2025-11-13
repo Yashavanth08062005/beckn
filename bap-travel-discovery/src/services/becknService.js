@@ -10,9 +10,11 @@ const { v4: uuidv4 } = require('uuid');
 class BecknService {
     
     constructor() {
-        this.onixBaseUrl = env.ONIX_URL || 'http://localhost:5000';
+        this.onixBaseUrl = env.ONIX_URL || 'http://127.0.0.1:5000';
         this.bapId = env.BAP_ID || 'travel-discovery-bap.example.com';
-        this.bapUri = env.BAP_URI || 'http://localhost:8080';
+        this.bapUri = env.BAP_URI || 'http://127.0.0.1:8081';
+        this.flightsBppUrl = env.FLIGHTS_BPP_URL || 'http://127.0.0.1:7001';
+        this.hotelsBppUrl = env.HOTELS_BPP_URL || 'http://127.0.0.1:7003';
     }
 
     /**
@@ -77,25 +79,10 @@ class BecknService {
                 }
             };
 
-            // Route request to the appropriate backend depending on category
-            const categoryId = message.intent?.category?.id || '';
-
-            // Prefer direct BPP calls for development: flights BPP and hotels BPP
-            if (categoryId.toUpperCase() === 'MOBILITY') {
-                // Flights
-                const flightsBppUrl = env.FLIGHTS_BPP_URL || 'http://localhost:7001';
-                const resp = await this.sendToBPP(flightsBppUrl, '/search', becknRequest);
-                return resp.data;
-            } else if (categoryId.toUpperCase() === 'HOSPITALITY') {
-                // Hotels
-                const hotelsBppUrl = env.HOTELS_BPP_URL || 'http://localhost:7003';
-                const resp = await this.sendToBPP(hotelsBppUrl, '/search', becknRequest);
-                return resp.data;
-            } else {
-                // Fallback to ONIX adapter (aggregator)
-                const onixResponse = await this.sendToONIX('/search', becknRequest);
-                return onixResponse.data;
-            }
+            // Route request to ONIX adapter (mock or real)
+            // The ONIX adapter handles all Beckn protocol messages
+            const onixResponse = await this.sendToONIX('/search', becknRequest);
+            return onixResponse.data;
 
         } catch (error) {
             logger.error('Error processing search:', error);

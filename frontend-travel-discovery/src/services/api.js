@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_BAP_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_BAP_URL || 'http://localhost:8081';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -123,14 +123,14 @@ export const searchTravelOptions = async (searchData) => {
     
     // Handle specific error types
     if (error.code === 'ECONNREFUSED') {
-      throw new Error('Unable to connect to travel service. Please ensure BAP is running on port 8080.');
+      throw new Error('Unable to connect to travel service. Please ensure BAP is running on port 8081.');
     }
 
     // axios throws a generic "Network Error" (no response) for CORS failures,
     // DNS failures, or when the backend is not reachable. Surface a clearer
     // troubleshooting message for those cases.
     if (error.message === 'Network Error' || !error.response) {
-      throw new Error('Unable to connect to travel service. Check that BAP is running on http://localhost:8080 and that CORS/networking allows requests from the frontend (http://localhost:3000).');
+      throw new Error('Unable to connect to travel service. Check that BAP is running on http://localhost:8081 and that CORS/networking allows requests from the frontend (http://localhost:3000).');
     }
 
     if (error.response?.status === 500) {
@@ -161,6 +161,7 @@ const createSearchIntent = (searchData) => {
   };
 
   if (searchData.transportMode === 'flight') {
+    const travelDate = searchData.travelDate || new Date().toISOString().split('T')[0];
     intent.fulfillment = {
       start: {
         location: {
@@ -174,12 +175,22 @@ const createSearchIntent = (searchData) => {
       },
       time: {
         range: {
-          start: new Date(searchData.travelDate + 'T00:00:00').toISOString(),
-          end: new Date(searchData.travelDate + 'T23:59:59').toISOString()
+          start: new Date(travelDate + 'T00:00:00').toISOString(),
+          end: new Date(travelDate + 'T23:59:59').toISOString()
         }
       }
     };
   } else if (searchData.transportMode === 'hotel') {
+    // Fallback dates if not provided
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfter = new Date(tomorrow);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+    
+    const checkInDate = searchData.checkInDate || today.toISOString().split('T')[0];
+    const checkOutDate = searchData.checkOutDate || dayAfter.toISOString().split('T')[0];
+    
     intent.fulfillment = {
       start: {
         location: {
@@ -188,8 +199,8 @@ const createSearchIntent = (searchData) => {
       },
       time: {
         range: {
-          start: new Date(searchData.checkInDate + 'T14:00:00').toISOString(), // Check-in time
-          end: new Date(searchData.checkOutDate + 'T11:00:00').toISOString()  // Check-out time
+          start: new Date(checkInDate + 'T14:00:00').toISOString(), // Check-in time
+          end: new Date(checkOutDate + 'T11:00:00').toISOString()  // Check-out time
         }
       }
     };
@@ -230,23 +241,50 @@ const transformBecknItem = (item, provider, transportMode) => {
       }
     };
   } else if (transportMode === 'hotel') {
+    const roomType = getTagValue(item.tags, 'ROOM_TYPE', 'TYPE') || 'Standard Room';
+    const bedType = getTagValue(item.tags, 'ROOM_TYPE', 'BED') || 'Double Bed';
+    const roomSize = getTagValue(item.tags, 'ROOM_TYPE', 'SIZE') || '30 sqm';
+    const amenitiesList = extractAmenitiesList(item.tags);
+    const policies = extractPoliciesObject(item.tags);
+    
     return {
       ...baseItem,
       details: {
-        name: item.descriptor?.name,
+        name: item.descriptor?.name || provider.descriptor?.name || 'Hotel',
         hotelId: item.id,
-        type: getTagValue(item.tags, 'ROOM_TYPE', 'TYPE') || 'Standard Room',
-        size: getTagValue(item.tags, 'ROOM_TYPE', 'SIZE'),
-        bedType: getTagValue(item.tags, 'ROOM_TYPE', 'BED'),
-        amenities: extractAmenities(item.tags),
-        policies: extractPolicies(item.tags),
-        rating: 4.2, // Mock rating
+        roomType: roomType,
+        bedType: bedType,
+        beds: 1,
+        adults: 2,
+        rooms: 1,
+        nights: 1,
+        cityCode: 'Mumbai',
+        cityName: 'Mumbai',
+        street: provider.descriptor?.short_desc || 'Luxury Hotel',
+        address: {
+          street: provider.descriptor?.short_desc || 'Hotel Address',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          country: 'India',
+          postalCode: '400001'
+        },
+        rating: 4.5,
+        amenities: amenitiesList,
+        checkInTime: '14:00',
+        checkOutTime: '11:00',
+        cancellationPolicy: policies.cancellation || 'Free till 48 hours before check-in',
+        paymentPolicy: policies.payment || 'Pay at hotel',
+        phone: '+91-XXXXXXXX00',
+        email: 'info@hotel.com',
+        roomDescription: item.descriptor?.long_desc || item.descriptor?.short_desc || 'Comfortable and spacious room with modern amenities',
         images: item.descriptor?.images || [],
-        description: item.descriptor?.long_desc || item.descriptor?.short_desc
+        description: item.descriptor?.long_desc || item.descriptor?.short_desc,
+        chainCode: provider.descriptor?.code || 'CHAIN'
       },
-      // For hotels, use the time field as check-in/check-out placeholders
-      checkIn: item.time?.timestamp,
-      checkOut: item.time?.timestamp
+      pricePerNight: parseFloat(item.price?.value || 0),
+      // For hotels, calculate based on check-in/check-out from search params
+      checkIn: item.time?.timestamp || new Date().toISOString(),
+      checkOut: item.time?.timestamp || new Date(Date.now() + 86400000).toISOString()
     };
   }
 
@@ -260,6 +298,36 @@ const getTagValue = (tags, tagCode, listCode) => {
   if (!tag || !tag.list) return null;
   const listItem = tag.list.find(l => l.code === listCode);
   return listItem?.value;
+};
+
+// Extract amenities list from tags
+const extractAmenitiesList = (tags) => {
+  if (!tags) return [];
+  const amenitiesTag = tags.find(t => t.code === 'AMENITIES');
+  if (!amenitiesTag || !amenitiesTag.list) return [];
+  
+  return amenitiesTag.list.map(item => {
+    // Format amenity name: convert code to readable format
+    const name = item.code.toLowerCase()
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    return name + (item.value ? ` (${item.value})` : '');
+  });
+};
+
+// Extract policies object from tags  
+const extractPoliciesObject = (tags) => {
+  if (!tags) return {};
+  const policiesTag = tags.find(t => t.code === 'POLICIES');
+  const policies = {};
+  
+  policiesTag?.list?.forEach(item => {
+    const key = item.code.toLowerCase();
+    policies[key] = item.value;
+  });
+  
+  return policies;
 };
 
 // Extract amenities from tags

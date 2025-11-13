@@ -6,7 +6,7 @@ const errorHandler = require('./middleware/errorHandler');
 const env = require('./config/env');
 
 const app = express();
-const PORT = env.PORT || 8080; // Changed to 8080 for BAP
+const PORT = env.PORT || 8081; // Changed to 8081 for BAP
 
 // Middleware
 app.use(cors());
