@@ -48,6 +48,12 @@ const TravelCard = ({ option }) => {
   };
 
   const details = option.details || {};
+  const currency = (option.currency || (details && details.priceCurrency))?.toString?.() || '';
+  const isInternational = (
+    String(details.flightNumber || '').startsWith('02-') ||
+    String(option.providerId || '').toLowerCase().includes('intl') ||
+    currency.toUpperCase() !== 'INR'
+  );
 
   return (
     <div className="card hover:border-blue-300 border-2 border-transparent transition-all">
@@ -68,6 +74,11 @@ const TravelCard = ({ option }) => {
               <span className="text-sm text-gray-500">
                 {details.flightNumber || 'N/A'}
               </span>
+              {isInternational && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                  International
+                </span>
+              )}
               {details.airlineCode && (
                 <span className={`px-2 py-1 rounded text-xs font-semibold ${getModeColor(option.travelMode)}`}>
                   {details.airlineCode}

@@ -94,15 +94,13 @@ class BecknService {
             const onixProviders = onixResponse.data?.message?.catalog?.providers || [];
             aggregated.message.catalog.providers.push(...onixProviders);
 
-            // If this is a flight search and matches BLR -> Mumbai, also query both flight BPPs
-            const startGps = message.intent?.fulfillment?.start?.location?.gps || '';
-            const endGps = message.intent?.fulfillment?.end?.location?.gps || '';
+            // If this is a mobility (flight) search, always query both flight BPPs
+            const categoryId = message.intent?.category?.id || '';
+            const isMobility = String(categoryId).toUpperCase() === 'MOBILITY';
 
-            const isBlrToMum = String(startGps).includes('12.9716') && String(endGps).includes('19.0760');
-
-            if (isBlrToMum) {
+            if (isMobility) {
+                // Query primary flights BPP
                 try {
-                    // Query primary flights BPP
                     const flightsRes = await this.sendToBPP(this.flightsBppUrl, '/search', becknRequest);
                     const flightsProviders = flightsRes.data?.message?.catalog?.providers || [];
                     aggregated.message.catalog.providers.push(...flightsProviders);
@@ -110,8 +108,8 @@ class BecknService {
                     logger.error('Error fetching from primary flights BPP', { error: err.message });
                 }
 
+                // Query international flights BPP
                 try {
-                    // Query international flights BPP
                     const intlRes = await this.sendToBPP(this.flightsIntlBppUrl, '/search', becknRequest);
                     const intlProviders = intlRes.data?.message?.catalog?.providers || [];
                     aggregated.message.catalog.providers.push(...intlProviders);

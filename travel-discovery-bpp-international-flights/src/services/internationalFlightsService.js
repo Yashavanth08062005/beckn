@@ -5,15 +5,11 @@ class InternationalFlightsService {
     try {
       console.log(`🔎 Intl search from ${startLocation} to ${endLocation} at ${travelTime}`);
 
-      // Only return meaningful international mock results if origin/destination match BLR->MUM
-      // We intentionally check for Bangalore coordinates -> Mumbai coordinates
-      const isBlrToMum = String(startLocation).includes('12.9716') && String(endLocation).includes('19.0760');
-
+      // Return example international carriers (mock) for any flight search
       const providers = [];
 
-      if (isBlrToMum) {
-        // Example international carriers (mock)
-        const intlFlights = [
+      // Example international carriers (mock)
+      const intlFlights = [
           {
             id: 'intl-flight-001',
             descriptor: { name: 'Air Global Intl', code: 'AG-100', short_desc: 'Intl connection via SIN', long_desc: 'International flight with one stopover' },
@@ -29,13 +25,11 @@ class InternationalFlightsService {
             tags: [ { code: 'AIRCRAFT_TYPE', list: [{ code: 'MODEL', value: 'Airbus A350' }] } ]
           }
         ];
-
-        providers.push({
-          id: 'intl-provider-001',
-          descriptor: { name: 'International Flights Provider', short_desc: 'Intl carrier aggregator' },
-          items: intlFlights
-        });
-      }
+      providers.push({
+        id: 'intl-provider-001',
+        descriptor: { name: 'International Flights Provider', short_desc: 'Intl carrier aggregator' },
+        items: intlFlights
+      });
 
       // Build catalog in same structure as other BPPs
       const catalog = {
