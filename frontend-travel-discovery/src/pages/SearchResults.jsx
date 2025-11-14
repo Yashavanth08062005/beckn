@@ -28,7 +28,11 @@ const SearchResults = () => {
         origin: searchParams.get("origin"),
         destination: searchParams.get("destination"),
         travelDate: searchParams.get("travelDate"),
-        transportMode: searchParams.get("transportMode"),
+        // If transportMode is not provided in URL but origin+destination exist,
+        // default to 'flight' so frontend sends the correct search intent.
+        transportMode: searchParams.get("transportMode") || (
+          searchParams.get("origin") && searchParams.get("destination") ? 'flight' : undefined
+        ),
         passengers: searchParams.get("passengers"),
         cityCode: searchParams.get("cityCode"),
         checkInDate: searchParams.get("checkInDate"),

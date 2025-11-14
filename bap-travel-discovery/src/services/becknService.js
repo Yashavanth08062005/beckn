@@ -14,6 +14,7 @@ class BecknService {
         this.bapId = env.BAP_ID || 'travel-discovery-bap.example.com';
         this.bapUri = env.BAP_URI || 'http://127.0.0.1:8081';
         this.flightsBppUrl = env.FLIGHTS_BPP_URL || 'http://127.0.0.1:7001';
+        this.flightsIntlBppUrl = env.FLIGHTS_INTL_BPP_URL || 'http://127.0.0.1:7005';
         this.hotelsBppUrl = env.HOTELS_BPP_URL || 'http://127.0.0.1:7003';
     }
 
@@ -80,9 +81,44 @@ class BecknService {
             };
 
             // Route request to ONIX adapter (mock or real)
-            // The ONIX adapter handles all Beckn protocol messages
+            // The ONIX adapter handles Beckn protocol messages; we also query BPPs directly
             const onixResponse = await this.sendToONIX('/search', becknRequest);
-            return onixResponse.data;
+
+            // Aggregate providers from ONIX and BPPs
+            const aggregated = {
+                context: onixResponse.data.context || this.createContext('on_search', context.transaction_id, context.message_id),
+                message: { catalog: { descriptor: onixResponse.data?.message?.catalog?.descriptor || {}, providers: [] } }
+            };
+
+            // Add providers from ONIX if present
+            const onixProviders = onixResponse.data?.message?.catalog?.providers || [];
+            aggregated.message.catalog.providers.push(...onixProviders);
+
+            // If this is a mobility (flight) search, always query both flight BPPs
+            const categoryId = message.intent?.category?.id || '';
+            const isMobility = String(categoryId).toUpperCase() === 'MOBILITY';
+
+            if (isMobility) {
+                // Query primary flights BPP
+                try {
+                    const flightsRes = await this.sendToBPP(this.flightsBppUrl, '/search', becknRequest);
+                    const flightsProviders = flightsRes.data?.message?.catalog?.providers || [];
+                    aggregated.message.catalog.providers.push(...flightsProviders);
+                } catch (err) {
+                    logger.error('Error fetching from primary flights BPP', { error: err.message });
+                }
+
+                // Query international flights BPP
+                try {
+                    const intlRes = await this.sendToBPP(this.flightsIntlBppUrl, '/search', becknRequest);
+                    const intlProviders = intlRes.data?.message?.catalog?.providers || [];
+                    aggregated.message.catalog.providers.push(...intlProviders);
+                } catch (err) {
+                    logger.error('Error fetching from international flights BPP', { error: err.message });
+                }
+            }
+
+            return aggregated;
 
         } catch (error) {
             logger.error('Error processing search:', error);

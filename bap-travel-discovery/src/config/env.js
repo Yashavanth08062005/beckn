@@ -17,6 +17,7 @@ const envConfig = {
     
     // BPP Configurations (flights and hotels)
     FLIGHTS_BPP_URL: process.env.FLIGHTS_BPP_URL || 'http://127.0.0.1:7001',
+    FLIGHTS_INTL_BPP_URL: process.env.FLIGHTS_INTL_BPP_URL || 'http://127.0.0.1:7005',
     HOTELS_BPP_URL: process.env.HOTELS_BPP_URL || 'http://127.0.0.1:7003',
     
     // Legacy Amadeus Configuration (for backward compatibility)

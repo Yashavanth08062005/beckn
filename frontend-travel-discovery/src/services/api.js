@@ -130,7 +130,7 @@ export const searchTravelOptions = async (searchData) => {
     // DNS failures, or when the backend is not reachable. Surface a clearer
     // troubleshooting message for those cases.
     if (error.message === 'Network Error' || !error.response) {
-      throw new Error('Unable to connect to travel service. Check that BAP is running on http://localhost:8081 and that CORS/networking allows requests from the frontend (http://localhost:3000).');
+      throw new Error('Unable to connect to travel service. Check that BAP is running on http://localhost:8081 and that CORS/networking allows requests from the frontend (http://localhost:3000)');
     }
 
     if (error.response?.status === 500) {
@@ -221,19 +221,35 @@ const transformBecknItem = (item, provider, transportMode) => {
   };
 
   if (transportMode === 'flight') {
+    // Determine whether this item is international. Heuristics:
+    // - provider id contains 'intl'
+    // - item id contains 'intl'
+    // - price currency is not INR (fallback)
+    const providerId = (provider.id || '').toLowerCase();
+    const itemId = (item.id || '').toLowerCase();
+    const currency = (item.price?.currency || 'INR').toUpperCase();
+    const isInternational = providerId.includes('intl') || itemId.includes('intl') || currency !== 'INR';
+
+    const prefix = isInternational ? '02-' : '01-';
+    const rawFlightCode = item.descriptor?.code || item.id || '';
+    const flightNumberPrefixed = `${prefix}${rawFlightCode}`;
+
     return {
       ...baseItem,
       details: {
-        airline: item.descriptor?.name,
-        flightNumber: item.descriptor?.code,
+        airline: item.descriptor?.name || provider.descriptor?.name || 'Airline',
+        flightNumber: flightNumberPrefixed,
         airlineCode: provider.descriptor?.code || provider.id,
-        aircraft: getTagValue(item.tags, 'AIRCRAFT_TYPE', 'MODEL'),
-        duration: '2h 30m', // Default - would be calculated from timings
+        aircraft: getTagValue(item.tags, 'AIRCRAFT_TYPE', 'MODEL') || 'N/A',
+        duration: getTagValue(item.tags, 'DURATION', 'VALUE') || '2h 30m', // Prefer tag value when present
         departureTime: item.time?.timestamp || new Date().toISOString(),
-        arrivalTime: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(), // Add 2.5 hours
+        arrivalTime: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(), // Add 2.5 hours default
         amenities: extractAmenities(item.tags),
         baggage: getTagValue(item.tags, 'AMENITIES', 'BAGGAGE') || '20kg',
         description: item.descriptor?.long_desc || item.descriptor?.short_desc,
+        originCity: item.descriptor?.short_desc || undefined,
+        destinationCity: item.descriptor?.long_desc || undefined,
+        numberOfBookableSeats: getTagValue(item.tags, 'SEATS', 'AVAILABLE') || undefined,
       },
       timings: {
         departure: item.time?.timestamp || new Date().toISOString(),

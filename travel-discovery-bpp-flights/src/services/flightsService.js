@@ -10,7 +10,7 @@ class FlightsService {
      */
     async searchFlights(startLocation, endLocation, travelTime) {
         try {
-            console.log(`🔍 Searching flights from ${startLocation} to ${endLocation} on ${travelTime}`);
+            console.log(` Searching flights from ${startLocation} to ${endLocation} on ${travelTime}`);
 
             // Mock flight data - in production, this would call real flight APIs
             const flights = [
