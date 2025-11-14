@@ -1,4 +1,12 @@
-#!/bin/bash
+Error Loading Results
+Server error: Failed to process search request
+
+Troubleshooting tips:
+
+Ensure the BAP service is running on port 8081
+Check that the ONIX adapter is running
+Verify network connectivity
+Try refreshing the pag#!/bin/bash
 
 # Beckn Travel Discovery - Complete Startup Script
 # This script starts all services with proper Node.js version handling

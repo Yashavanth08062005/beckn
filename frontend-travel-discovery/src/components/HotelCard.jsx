@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
-import { MapPin, Star, Users, Bed, IndianRupee, Wifi, Coffee, Car, UtensilsCrossed, ChevronDown, ChevronUp } from 'lucide-react';
+import React from 'react';
+import { MapPin, Star, Users, Bed, IndianRupee, Wifi, Coffee, Car, UtensilsCrossed } from 'lucide-react';
 import { format } from 'date-fns';
 
 const HotelCard = ({ option }) => {
-  const [showDetails, setShowDetails] = useState(false);
-
   const formatDate = (dateString) => {
     try {
       return format(new Date(dateString), 'dd MMM yyyy');
@@ -143,18 +141,8 @@ const HotelCard = ({ option }) => {
         </div>
       )}
 
-      {/* Expandable Details Section */}
-      <div className="mt-3">
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="w-full pt-3 border-t border-gray-200 flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
-        >
-          <span>{showDetails ? 'Hide' : 'Show'} Hotel Details</span>
-          {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
-
-        {showDetails && (
-          <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+      {/* Hotel Details Section */}
+      <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
             {/* Room Details */}
             {details.roomDescription && (
               <div>
@@ -233,8 +221,6 @@ const HotelCard = ({ option }) => {
               <p><span className="font-medium">Data Provider:</span> {option.providerId}</p>
             </div>
           </div>
-        )}
-      </div>
     </div>
   );
 };
