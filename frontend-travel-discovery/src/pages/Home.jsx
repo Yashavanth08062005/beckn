@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import SearchForm from '../components/SearchForm';
 import { Sparkles, Shield, Clock, Award } from 'lucide-react';
 

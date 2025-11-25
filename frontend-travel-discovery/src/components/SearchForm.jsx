@@ -17,9 +17,8 @@ const SearchForm = ({ prefill }) => {
     rooms: 1,
   });
 
-  
   useEffect(() => {
-    if (prefill.origin || prefill.destination) {
+    if (prefill.origin || prefill.destination || prefill.cityCode) {
       setSearchData((prev) => ({ ...prev, ...prefill }));
     }
   }, [prefill]);
@@ -32,16 +31,31 @@ const SearchForm = ({ prefill }) => {
   };
 
   const handleModeChange = (mode) => {
-    setSearchData({
-      ...searchData,
+    setSearchData((prev) => ({
+      ...prev,
       transportMode: mode,
-    });
+    }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const queryParams = new URLSearchParams(searchData).toString();
     navigate(`/search?${queryParams}`);
+  };
+
+  const getButtonLabel = () => {
+    switch (searchData.transportMode) {
+      case "flight":
+        return "Search Flights";
+      case "hotel":
+        return "Search Hotels";
+      case "bus":
+        return "Search Buses";
+      case "train":
+        return "Search Trains";
+      default:
+        return "Search";
+    }
   };
 
   return (
@@ -51,9 +65,11 @@ const SearchForm = ({ prefill }) => {
         {[
           { label: "Flights", mode: "flight" },
           { label: "Hotels", mode: "hotel" },
-        ].map((tab, i) => (
+          { label: "Bus", mode: "bus" },
+          { label: "Train", mode: "train" },
+        ].map((tab) => (
           <button
-            key={i}
+            key={tab.mode}
             type="button"
             onClick={() => handleModeChange(tab.mode)}
             className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
@@ -70,7 +86,7 @@ const SearchForm = ({ prefill }) => {
       {/* Search Form */}
       <form onSubmit={handleSubmit}>
         {searchData.transportMode === "flight" ? (
-          /* Flight Search Fields */
+          /* ✈ Flight Search Fields */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <AutoCompleteInput
               label="From"
@@ -128,8 +144,8 @@ const SearchForm = ({ prefill }) => {
               </div>
             </div>
           </div>
-        ) : (
-          /* Hotel Search Fields */
+        ) : searchData.transportMode === "hotel" ? (
+          /* 🏨 Hotel Search Fields */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <AutoCompleteInput
               label="City"
@@ -208,6 +224,65 @@ const SearchForm = ({ prefill }) => {
               </div>
             </div>
           </div>
+        ) : (
+          /* 🚌 / 🚆 Bus & Train combined fields */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <AutoCompleteInput
+              label="From"
+              name="origin"
+              value={searchData.origin}
+              onChange={handleChange}
+              placeholder="Enter departure city or station"
+            />
+
+            <AutoCompleteInput
+              label="To"
+              name="destination"
+              value={searchData.destination}
+              onChange={handleChange}
+              placeholder="Enter arrival city or station"
+            />
+
+            {/* Travel Date */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="date"
+                  name="travelDate"
+                  value={searchData.travelDate}
+                  onChange={handleChange}
+                  className="input-field pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Passengers */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Passengers
+              </label>
+              <div className="relative">
+                <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <select
+                  name="passengers"
+                  value={searchData.passengers}
+                  onChange={handleChange}
+                  className="input-field pl-10"
+                >
+                  {[1, 2, 3, 4, 5, 6].map((num) => (
+                    <option key={num} value={num}>
+                      {num} {num === 1 ? "Passenger" : "Passengers"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
         )}
 
         <button
@@ -215,7 +290,7 @@ const SearchForm = ({ prefill }) => {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 transition-all"
         >
           <Search className="h-5 w-5" />
-          <span>Search {searchData.transportMode === "flight" ? "Flights" : "Hotels"}</span>
+          <span>{getButtonLabel()}</span>
         </button>
       </form>
     </div>

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MapPin, Star, Users, Bed, IndianRupee, Wifi, Coffee, Car, UtensilsCrossed } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
 const HotelCard = ({ option }) => {
@@ -27,6 +28,10 @@ const HotelCard = ({ option }) => {
 
   const details = option.details || {};
   const address = details.address || {};
+
+  const [showBooking, setShowBooking] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const navigate = useNavigate();
 
   return (
     <div className="card hover:border-blue-300 border-2 border-transparent transition-all">
@@ -119,6 +124,9 @@ const HotelCard = ({ option }) => {
           <div className="text-xs text-gray-500 italic">
             View only
           </div>
+          <div>
+            <button onClick={() => navigate('/booking', { state: { travelOption: option } })} className="mt-2 w-full px-3 py-2 rounded bg-blue-600 text-white text-sm">Book</button>
+          </div>
         </div>
       </div>
 
@@ -140,6 +148,8 @@ const HotelCard = ({ option }) => {
           </div>
         </div>
       )}
+
+      {/* Booking moved to separate full-page flow; history stored in localStorage. */}
 
       {/* Hotel Details Section */}
       <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">

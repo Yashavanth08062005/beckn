@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Clock, MapPin, IndianRupee, Plane, Train, Bus, Luggage, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
 const TravelCard = ({ option }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const navigate = useNavigate();
 
   const getModeIcon = (mode) => {
     switch (mode) {
@@ -100,13 +102,17 @@ const TravelCard = ({ option }) => {
               <div className="flex-1 flex flex-col items-center px-2">
                 <div className="flex items-center w-full">
                   <div className="flex-1 border-t-2 border-gray-300"></div>
-                  <Plane className="h-4 w-4 text-blue-500 mx-2" />
+                  {option.travelMode === 'bus' ? (
+                    <Bus className="h-4 w-4 text-orange-500 mx-2" />
+                  ) : (
+                    <Plane className="h-4 w-4 text-blue-500 mx-2" />
+                  )}
                   <div className="flex-1 border-t-2 border-gray-300"></div>
                 </div>
                 <div className="text-xs text-gray-500 mt-1 text-center">
                   <p className="font-medium">{details.duration || 'N/A'}</p>
                   <p className="text-gray-400">
-                    {details.stops === 0 ? 'Non-stop' : `${details.stops} stop${details.stops > 1 ? 's' : ''}`}
+                    {typeof details.stops === 'string' ? details.stops : (details.stops === 0 ? 'Non-stop' : `${details.stops} stop${details.stops > 1 ? 's' : ''}`)}
                   </p>
                 </div>
               </div>
@@ -117,6 +123,9 @@ const TravelCard = ({ option }) => {
                 <p className="text-gray-500 text-xs">{formatDate(details.arrivalTime || option.timings?.arrival)}</p>
                 {details.arrivalTerminal && (
                   <p className="text-gray-400 text-xs">Terminal {details.arrivalTerminal}</p>
+                )}
+                {option.travelMode === 'bus' && details.busOperator && (
+                  <p className="text-gray-500 text-xs">{details.busOperator}</p>
                 )}
               </div>
             </div>
@@ -134,20 +143,23 @@ const TravelCard = ({ option }) => {
             </div>
             <p className="text-xs text-gray-500">per person</p>
           </div>
-          
-          <div className="text-xs text-gray-500 italic">
-            View only
+          <div className="text-xs text-gray-500 italic">View only</div>
+
+          <div>
+            <button onClick={() => navigate('/booking', { state: { travelOption: option } })} className="mt-2 w-full px-3 py-2 rounded bg-blue-600 text-white text-sm">Book</button>
           </div>
         </div>
       </div>
 
+      {/* Booking details moved to dedicated Booking page and Booking History. */}
+
       {/* Quick Info Bar */}
       <div className="mt-4 pt-3 border-t border-gray-200">
         <div className="flex flex-wrap gap-4 text-sm">
-          {/* Cabin Class */}
+          {/* Cabin Class / Seat Type */}
           <div className="flex items-center space-x-1 text-gray-700">
             <Users className="h-4 w-4 text-blue-500" />
-            <span className="font-medium">{details.cabinClass || 'Economy'}</span>
+            <span className="font-medium">{details.seatType || details.cabinClass || 'Economy'}</span>
           </div>
           
           {/* Baggage */}
@@ -155,6 +167,17 @@ const TravelCard = ({ option }) => {
             <div className="flex items-center space-x-1 text-gray-700">
               <Luggage className="h-4 w-4 text-blue-500" />
               <span>{details.baggage}</span>
+            </div>
+          )}
+          
+          {/* Bus Amenities */}
+          {details.amenities && Array.isArray(details.amenities) && details.amenities.length > 0 && (
+            <div className="text-gray-600 flex gap-2">
+              {details.amenities.map((amenity, idx) => (
+                <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                  {amenity.name}: {amenity.value}
+                </span>
+              ))}
             </div>
           )}
           

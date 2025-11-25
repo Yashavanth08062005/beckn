@@ -70,6 +70,24 @@ services:
       - beckn-network
     restart: unless-stopped
 
+  # BPP - Buses Provider
+  travel-discovery-bpp-buses:
+    build:
+      context: ./travel-discovery-bpp-buses
+      dockerfile: Dockerfile
+    ports:
+      - "7006:7006"
+    environment:
+      - PORT=7006
+      - BPP_ID=buses-bpp.example.com
+      - BPP_URI=http://travel-discovery-bpp-buses:7006
+      - ONIX_URL=http://beckn-onix:5000
+    depends_on:
+      - beckn-onix
+    networks:
+      - beckn-network
+    restart: unless-stopped
+
   # Frontend - React App
   travel-discovery-frontend:
     build:

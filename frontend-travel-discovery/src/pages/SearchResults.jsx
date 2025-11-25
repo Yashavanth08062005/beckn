@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import TravelCard from "../components/TravelCard";
 import HotelCard from "../components/HotelCard";
 import FilterSidebar from "../components/FilterSidebar";
 import { searchTravelOptions } from "../services/api";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, History } from "lucide-react";
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [bookings, setBookings] = useState([]);
 
   const [filters, setFilters] = useState({
     maxPrice: 50000,
@@ -20,19 +22,36 @@ const SearchResults = () => {
   });
 
   useEffect(() => {
+    // Load bookings from localStorage
+    try {
+      const raw = localStorage.getItem("bookings");
+      if (raw) setBookings(JSON.parse(raw));
+    } catch (e) {
+      console.error("Failed to load bookings", e);
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchResults = async () => {
       setLoading(true);
       setError(null);
+
+      const urlTransportMode = searchParams.get("transportMode");
+      const hasOriginDest = searchParams.get("origin") && searchParams.get("destination");
+      const hasHotelParams =
+        searchParams.get("cityCode") && searchParams.get("checkInDate");
 
       const searchData = {
         origin: searchParams.get("origin"),
         destination: searchParams.get("destination"),
         travelDate: searchParams.get("travelDate"),
-        // If transportMode is not provided in URL but origin+destination exist,
-        // default to 'flight' so frontend sends the correct search intent.
-        transportMode: searchParams.get("transportMode") || (
-          searchParams.get("origin") && searchParams.get("destination") ? 'flight' : undefined
-        ),
+        transportMode:
+          urlTransportMode ||
+          (hasHotelParams
+            ? "hotel"
+            : hasOriginDest
+            ? "flight"
+            : undefined),
         passengers: searchParams.get("passengers"),
         cityCode: searchParams.get("cityCode"),
         checkInDate: searchParams.get("checkInDate"),
@@ -51,27 +70,24 @@ const SearchResults = () => {
       }
     };
 
-    const hasFlightParams =
+    const hasFlightLikeParams =
       searchParams.get("origin") && searchParams.get("destination");
     const hasHotelParams =
       searchParams.get("cityCode") && searchParams.get("checkInDate");
 
-    if (hasFlightParams || hasHotelParams) {
+    if (hasFlightLikeParams || hasHotelParams) {
       fetchResults();
     }
   }, [searchParams]);
 
   const filteredResults = results
     .filter((option) => {
-      // Price filter
       if (option.price > filters.maxPrice) return false;
 
-      // Mode filter
       if (filters.modes.length > 0 && !filters.modes.includes(option.travelMode)) {
         return false;
       }
 
-      // Departure Time filter
       if (filters.departureTimes.length > 0 && option.timings?.departure) {
         const depHour = new Date(option.timings.departure).getHours();
         const isInSelectedTime = filters.departureTimes.some((t) => {
@@ -101,6 +117,26 @@ const SearchResults = () => {
       }
     });
 
+  const currentModeFromUrl = searchParams.get("transportMode");
+  const isHotelSearch =
+    searchParams.get("cityCode") && searchParams.get("checkInDate");
+  const inferredMode = isHotelSearch
+    ? "hotel"
+    : currentModeFromUrl || "flight";
+
+  const bookingType =
+    inferredMode === "hotel"
+      ? "hotel"
+      : inferredMode === "bus"
+      ? "bus"
+      : inferredMode === "train"
+      ? "train"
+      : "flight";
+
+  const currentBookingsCount = bookings.filter(
+    (b) => b.bookingType === bookingType
+  ).length;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4">
@@ -122,8 +158,10 @@ const SearchResults = () => {
                 {searchParams.get("cityCode")}
               </h1>
               <p className="text-gray-600">
-                Check-in: {searchParams.get("checkInDate")} • Check-out: {searchParams.get("checkOutDate")} •{" "}
-                {searchParams.get("rooms")} Room(s) • {searchParams.get("passengers")} Guest(s)
+                Check-in: {searchParams.get("checkInDate")} • Check-out:{" "}
+                {searchParams.get("checkOutDate")} •{" "}
+                {searchParams.get("rooms")} Room(s) •{" "}
+                {searchParams.get("passengers")} Guest(s)
               </p>
             </>
           )}
@@ -173,14 +211,28 @@ const SearchResults = () => {
               </div>
             ) : (
               <>
-                <div className="mb-4">
-                  <p className="text-gray-600">
+                <div className="mb-6 flex items-center justify-between">
+                  <p className="text-gray-600 text-sm">
                     Showing{" "}
-                    <span className="font-bold">
+                    <span className="font-bold text-gray-900">
                       {filteredResults.length}
                     </span>{" "}
                     results
                   </p>
+                  <button
+                    onClick={() => {
+                      navigate(`/booking-history?type=${bookingType}`);
+                    }}
+                    className="flex items-center space-x-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold"
+                  >
+                    <History className="h-5 w-5" />
+                    <span>Booking History</span>
+                    {bookings.length > 0 && (
+                      <span className="bg-white text-blue-600 rounded-full px-2 py-0.5 text-xs font-bold ml-1">
+                        {currentBookingsCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
                 <div className="space-y-4">
                   {filteredResults.map((option, index) =>

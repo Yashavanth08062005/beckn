@@ -16,6 +16,7 @@ class BecknService {
         this.flightsBppUrl = env.FLIGHTS_BPP_URL || 'http://127.0.0.1:7001';
         this.flightsIntlBppUrl = env.FLIGHTS_INTL_BPP_URL || 'http://127.0.0.1:7005';
         this.hotelsBppUrl = env.HOTELS_BPP_URL || 'http://127.0.0.1:7003';
+        this.busesBppUrl = env.BUSES_BPP_URL || 'http://127.0.0.1:7006';
     }
 
     /**
@@ -94,11 +95,10 @@ class BecknService {
             const onixProviders = onixResponse.data?.message?.catalog?.providers || [];
             aggregated.message.catalog.providers.push(...onixProviders);
 
-            // If this is a mobility (flight) search, always query both flight BPPs
-            const categoryId = message.intent?.category?.id || '';
-            const isMobility = String(categoryId).toUpperCase() === 'MOBILITY';
+            // Determine category and query relevant BPPs
+            const categoryId = (message.intent?.category?.id || '').toString().toUpperCase();
 
-            if (isMobility) {
+            if (categoryId === 'FLIGHT') {
                 // Query primary flights BPP
                 try {
                     const flightsRes = await this.sendToBPP(this.flightsBppUrl, '/search', becknRequest);
@@ -115,6 +115,15 @@ class BecknService {
                     aggregated.message.catalog.providers.push(...intlProviders);
                 } catch (err) {
                     logger.error('Error fetching from international flights BPP', { error: err.message });
+                }
+            } else if (categoryId === 'BUS') {
+                // Query buses BPP
+                try {
+                    const busesRes = await this.sendToBPP(this.busesBppUrl, '/search', becknRequest);
+                    const busesProviders = busesRes.data?.message?.catalog?.providers || [];
+                    aggregated.message.catalog.providers.push(...busesProviders);
+                } catch (err) {
+                    logger.error('Error fetching from buses BPP', { error: err.message });
                 }
             }
 
