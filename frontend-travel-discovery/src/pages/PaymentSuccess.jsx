@@ -26,19 +26,19 @@ const PaymentSuccess = () => {
         try {
             const API_BASE_URL = import.meta.env.VITE_BAP_URL || 'http://localhost:8081';
             const bookingRef = `BK${Date.now().toString().slice(-8)}`;
-            
+
             const bookingPayload = {
                 booking_reference: bookingRef,
                 user_id: user?.id || null,
                 booking_type: type,
                 item_id: item.id,
                 provider_id: item.providerId,
-                item_name: type === 'flight' ? item.details?.airline : item.details?.name,
-                item_code: type === 'flight' ? item.details?.flightNumber : item.details?.hotelId,
-                origin: type === 'flight' ? item.origin : null,
-                destination: type === 'flight' ? item.destination : null,
-                departure_time: type === 'flight' ? item.details?.departureTime : null,
-                arrival_time: type === 'flight' ? item.details?.arrivalTime : null,
+                item_name: type === 'flight' ? item.details?.airline : (type === 'bus' ? (item.descriptor?.name || item.details?.name) : item.details?.name),
+                item_code: type === 'flight' ? item.details?.flightNumber : (type === 'bus' ? (item.descriptor?.code || item.details?.number) : item.details?.hotelId),
+                origin: (type === 'flight' || type === 'bus') ? item.origin : null,
+                destination: (type === 'flight' || type === 'bus') ? item.destination : null,
+                departure_time: (type === 'flight' || type === 'bus') ? (item.details?.departureTime || item.time?.range?.start) : null,
+                arrival_time: (type === 'flight' || type === 'bus') ? (item.details?.arrivalTime || item.time?.range?.end) : null,
                 check_in_date: type === 'hotel' ? item.checkIn : null,
                 check_out_date: type === 'hotel' ? item.checkOut : null,
                 passenger_name: bookingData.passenger_name,
@@ -70,7 +70,7 @@ const PaymentSuccess = () => {
             console.log('💾 Saving booking to database:', bookingPayload);
 
             const response = await axios.post(`${API_BASE_URL}/api/bookings`, bookingPayload);
-            
+
             console.log('✅ Booking saved successfully:', response.data);
             setBookingReference(bookingRef);
             setSaving(false);
@@ -132,7 +132,7 @@ const PaymentSuccess = () => {
                                         {type === 'flight' ? 'Flight' : 'Hotel'}
                                     </span>
                                     <span className="font-medium text-gray-900">
-                                        {type === 'flight' 
+                                        {type === 'flight'
                                             ? `${item.origin} → ${item.destination}`
                                             : item.details?.name
                                         }
