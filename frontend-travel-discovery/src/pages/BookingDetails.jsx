@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plane, User, MapPin, Phone, Mail, CreditCard, Calendar } from 'lucide-react';
+import { Plane, User, MapPin, Phone, Mail, CreditCard, Calendar, Bus } from 'lucide-react';
 import axios from 'axios';
 
 const BookingDetails = () => {
@@ -13,6 +13,17 @@ const BookingDetails = () => {
     const [success, setSuccess] = useState(false);
 
     const selectedFlight = location.state?.flight;
+    const bookingType = location.state?.type || 'flight';
+
+    // Detect if this is a bus booking
+    const isBus = bookingType === 'bus' ||
+        bookingType === 'Bus' ||
+        selectedFlight?.category_id === 'BUS' ||
+        selectedFlight?.category_id === 'bus' ||
+        selectedFlight?.category_id === 'Mobility' ||
+        selectedFlight?.booking_type === 'bus' ||
+        (selectedFlight?.descriptor?.code && (selectedFlight.descriptor.code.includes('KSRTC') || selectedFlight.descriptor.code.includes('KAD') || selectedFlight.descriptor.code.includes('VRL'))) ||
+        (selectedFlight?.details?.name && (selectedFlight.details.name.includes('Bus') || selectedFlight.details.name.includes('KSRTC') || selectedFlight.details.name.includes('Transport')));
 
     // Debug: Log flight data to see structure
     useEffect(() => {
@@ -135,7 +146,8 @@ const BookingDetails = () => {
                     state: { 
                         booking: selectResponse.data,
                         flight: selectedFlight,
-                        passenger: formData
+                        passenger: formData,
+                        type: bookingType
                     } 
                 });
             }, 2000);
@@ -180,16 +192,23 @@ const BookingDetails = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Flight Details - Left Side */}
+                    {/* Service Details - Left Side */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-xl shadow-md p-6 sticky top-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-4">Flight Details</h2>
+                            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                                {isBus ? (
+                                    <Bus className="h-6 w-6 mr-2 text-orange-600" />
+                                ) : (
+                                    <Plane className="h-6 w-6 mr-2 text-blue-600" />
+                                )}
+                                {isBus ? 'Bus Details' : 'Flight Details'}
+                            </h2>
                             
                             <div className="space-y-4">
                                 <div>
-                                    <p className="text-sm text-gray-500">Airline</p>
+                                    <p className="text-sm text-gray-500">{isBus ? 'Operator' : 'Airline'}</p>
                                     <p className="text-lg font-semibold text-gray-900">
-                                        {selectedFlight.details?.airline || selectedFlight.descriptor?.name || 'Airline'}
+                                        {selectedFlight.details?.airline || selectedFlight.descriptor?.name || (isBus ? 'Bus Operator' : 'Airline')}
                                     </p>
                                     <p className="text-sm text-gray-600">
                                         {selectedFlight.details?.flightNumber || selectedFlight.descriptor?.code || 'N/A'}
@@ -210,7 +229,11 @@ const BookingDetails = () => {
                                             </div>
                                             <div className="flex-1 flex items-center justify-center px-4">
                                                 <div className="border-t-2 border-gray-300 flex-1"></div>
-                                                <Plane className="h-5 w-5 text-blue-600 mx-2" />
+                                                {isBus ? (
+                                                    <Bus className="h-5 w-5 text-orange-600 mx-2" />
+                                                ) : (
+                                                    <Plane className="h-5 w-5 text-blue-600 mx-2" />
+                                                )}
                                                 <div className="border-t-2 border-gray-300 flex-1"></div>
                                             </div>
                                             <div className="text-center">
@@ -237,26 +260,31 @@ const BookingDetails = () => {
                                 </div>
 
                                 <div className="border-t pt-4">
-                                    <p className="text-sm text-gray-500 mb-2">Flight Info</p>
+                                    <p className="text-sm text-gray-500 mb-2">{isBus ? 'Bus Info' : 'Flight Info'}</p>
                                     <div className="space-y-2">
-                                        {selectedFlight.details?.cabinClass && (
+                                        {selectedFlight.details?.cabinClass && !isBus && (
                                             <p className="text-sm text-gray-700">
                                                 • Class: {selectedFlight.details.cabinClass}
                                             </p>
                                         )}
-                                        {selectedFlight.details?.baggage && (
+                                        {selectedFlight.details?.seatType && isBus && (
+                                            <p className="text-sm text-gray-700">
+                                                • Seat Type: {selectedFlight.details.seatType}
+                                            </p>
+                                        )}
+                                        {selectedFlight.details?.baggage && !isBus && (
                                             <p className="text-sm text-gray-700">
                                                 • Baggage: {selectedFlight.details.baggage}
                                             </p>
                                         )}
                                         {selectedFlight.details?.aircraft && (
                                             <p className="text-sm text-gray-700">
-                                                • Aircraft: {selectedFlight.details.aircraft}
+                                                • {isBus ? 'Bus Type' : 'Aircraft'}: {selectedFlight.details.aircraft}
                                             </p>
                                         )}
                                         {selectedFlight.details?.stops !== undefined && (
                                             <p className="text-sm text-gray-700">
-                                                • Stops: {selectedFlight.details.stops === 0 ? 'Non-stop' : selectedFlight.details.stops}
+                                                • Stops: {selectedFlight.details.stops === 0 ? (isBus ? 'Direct' : 'Non-stop') : selectedFlight.details.stops}
                                             </p>
                                         )}
                                     </div>

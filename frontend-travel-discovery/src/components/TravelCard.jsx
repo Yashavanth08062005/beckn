@@ -17,16 +17,16 @@ const TravelCard = ({ option }) => {
     navigate('/booking', { state: { item: option, type: option.travelMode } });
   };
 
-  const getModeIcon = (mode) => {
+  const getModeIcon = (mode, size = "h-6 w-6") => {
     switch (mode) {
       case 'flight':
-        return <Plane className="h-6 w-6 text-blue-600" />;
+        return <Plane className={`${size} text-blue-600`} />;
       case 'train':
-        return <Train className="h-6 w-6 text-green-600" />;
+        return <Train className={`${size} text-green-600`} />;
       case 'bus':
-        return <Bus className="h-6 w-6 text-orange-600" />;
+        return <Bus className={`${size} text-orange-600`} />;
       default:
-        return <Plane className="h-6 w-6 text-blue-600" />;
+        return <Plane className={`${size} text-blue-600`} />;
     }
   };
 
@@ -112,7 +112,7 @@ const TravelCard = ({ option }) => {
               <div className="flex-1 flex flex-col items-center px-2">
                 <div className="flex items-center w-full">
                   <div className="flex-1 border-t-2 border-gray-300"></div>
-                  <Plane className="h-4 w-4 text-blue-500 mx-2" />
+                  {getModeIcon(option.travelMode, "h-4 w-4 mx-2")}
                   <div className="flex-1 border-t-2 border-gray-300"></div>
                 </div>
                 <div className="text-xs text-gray-500 mt-1 text-center">
@@ -197,7 +197,7 @@ const TravelCard = ({ option }) => {
             onClick={() => setShowDetails(!showDetails)}
             className="w-full mt-3 pt-3 border-t border-gray-200 flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
           >
-            <span>{showDetails ? 'Hide' : 'Show'} Flight Details</span>
+            <span>{showDetails ? 'Hide' : 'Show'} {option.travelMode === 'bus' ? 'Bus' : option.travelMode === 'train' ? 'Train' : 'Flight'} Details</span>
             {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
 
@@ -226,7 +226,9 @@ const TravelCard = ({ option }) => {
               {/* Segment Details */}
               {details.segments && details.segments.length > 1 && (
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Flight Segments</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    {option.travelMode === 'bus' ? 'Bus Route' : option.travelMode === 'train' ? 'Train Route' : 'Flight Segments'}
+                  </h4>
                   <div className="space-y-3">
                     {details.segments.map((segment, idx) => (
                       <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">

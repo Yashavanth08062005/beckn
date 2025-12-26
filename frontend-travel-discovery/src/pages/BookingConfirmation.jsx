@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle, Plane, User, MapPin, Phone, Mail, Calendar, Download } from 'lucide-react';
+import { CheckCircle, Plane, User, MapPin, Phone, Mail, Calendar, Download, Bus } from 'lucide-react';
 
 const BookingConfirmation = () => {
     const location = useLocation();
@@ -24,13 +24,19 @@ const BookingConfirmation = () => {
     }
 
     const bookingId = `BK${Date.now().toString().slice(-8)}`;
-    const isBus = type === 'bus' || flight.category_id === 'BUS';
+    const isBus = type === 'bus' ||
+        type === 'Bus' ||
+        flight?.category_id === 'BUS' ||
+        flight?.category_id === 'bus' ||
+        flight?.category_id === 'Mobility' ||
+        flight?.booking_type === 'bus' ||
+        (flight?.descriptor?.code && (flight.descriptor.code.includes('KSRTC') || flight.descriptor.code.includes('KAD') || flight.descriptor.code.includes('VRL'))) ||
+        (flight?.details?.name && (flight.details.name.includes('Bus') || flight.details.name.includes('KSRTC') || flight.details.name.includes('Transport')));
 
-    // Helper for labels
-    const labels = isBus ? {
+    const busLabels = {
         title: 'Bus Ticket Confirmed!',
         subtitle: 'Your bus seat has been successfully booked',
-        detailsTitle: 'Journey Details',
+        detailsTitle: 'Bus Details',
         providerLabel: 'Operator',
         vehicleLabel: 'Bus Number',
         deptLabel: 'Boarding Point',
@@ -43,7 +49,9 @@ const BookingConfirmation = () => {
             '• Show the ticket SMS/Email to the conductor',
             '• Booking confirmation has been sent to your email'
         ]
-    } : {
+    };
+
+    const flightLabels = {
         title: 'Booking Confirmed!',
         subtitle: 'Your flight has been successfully booked',
         detailsTitle: 'Flight Details',
@@ -61,6 +69,8 @@ const BookingConfirmation = () => {
             '• You can check-in online 24 hours before departure'
         ]
     };
+
+    const labels = isBus ? busLabels : flightLabels;
 
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -83,7 +93,11 @@ const BookingConfirmation = () => {
                 {/* Journey Details */}
                 <div className="bg-white rounded-xl shadow-md p-6 mb-6">
                     <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                        <Plane className={`h-6 w-6 mr-2 ${isBus ? 'text-orange-600' : 'text-blue-600'}`} />
+                        {isBus ? (
+                            <Bus className="h-6 w-6 mr-2 text-orange-600" />
+                        ) : (
+                            <Plane className="h-6 w-6 mr-2 text-blue-600" />
+                        )}
                         {labels.detailsTitle}
                     </h2>
 
@@ -158,24 +172,29 @@ const BookingConfirmation = () => {
                     <div className="mt-6 pt-6 border-t">
                         <p className="text-sm text-gray-500 mb-2">{labels.infoTitle}</p>
                         <div className="flex flex-wrap gap-2">
-                            {flight.details?.cabinClass && (
+                            {flight.details?.cabinClass && !isBus && (
                                 <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
                                     Class: {flight.details.cabinClass}
                                 </span>
                             )}
-                            {flight.details?.baggage && (
+                            {flight.details?.seatType && isBus && (
+                                <span className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-sm">
+                                    Seat Type: {flight.details.seatType}
+                                </span>
+                            )}
+                            {flight.details?.baggage && !isBus && (
                                 <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
                                     Baggage: {flight.details.baggage}
                                 </span>
                             )}
                             {flight.details?.aircraft && (
-                                <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+                                <span className={`${isBus ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700'} px-3 py-1 rounded-full text-sm`}>
                                     {isBus ? 'Bus Type' : 'Aircraft'}: {flight.details.aircraft}
                                 </span>
                             )}
                             {flight.details?.stops !== undefined && (
-                                <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
-                                    {flight.details.stops === 0 ? 'Non-stop' : `${flight.details.stops} stop(s)`}
+                                <span className={`${isBus ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700'} px-3 py-1 rounded-full text-sm`}>
+                                    {flight.details.stops === 0 ? (isBus ? 'Direct' : 'Non-stop') : `${flight.details.stops} stop(s)`}
                                 </span>
                             )}
                         </div>

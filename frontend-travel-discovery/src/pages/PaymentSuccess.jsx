@@ -173,7 +173,8 @@ const PaymentSuccess = () => {
                                         status: 'CONFIRMED'
                                     },
                                     flight: item,
-                                    passenger: bookingData
+                                    passenger: bookingData,
+                                    type: type // Pass the booking type to BookingConfirmation
                                 }
                             })}
                             disabled={saving}

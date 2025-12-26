@@ -7,28 +7,95 @@ const db = require('../config/database');
 class BusService {
 
     /**
+     * Map GPS coordinates or airport codes to city names
+     */
+    getCityFromGps(gps) {
+        if (!gps) return null;
+
+        const cityMap = {
+            // GPS coordinates
+            '12.9716,77.5946': 'Bangalore',  // BLR
+            '19.0896,72.8656': 'Mumbai',     // BOM
+            '28.5665,77.1031': 'Delhi',      // DEL
+            '12.9941,80.1709': 'Chennai',    // MAA
+            '22.6548,88.4467': 'Kolkata',    // CCU
+            '17.2403,78.4294': 'Hyderabad',  // HYD
+            '15.3808,73.8389': 'Goa',        // GOI
+            '18.5822,73.9197': 'Pune',       // PNQ
+            '26.9124,75.7873': 'Jaipur',     // JAI
+            '23.0726,72.6263': 'Ahmedabad',  // AMD
+
+            // Alternative GPS (e.g. from api.js defaults or other services)
+            '19.0760,72.8777': 'Mumbai',
+            '28.7041,77.1025': 'Delhi',
+
+            // IATA Codes
+            'BLR': 'Bangalore',
+            'BOM': 'Mumbai',
+            'DEL': 'Delhi',
+            'MAA': 'Chennai',
+            'CCU': 'Kolkata',
+            'HYD': 'Hyderabad',
+            'GOI': 'Goa',
+            'PNQ': 'Pune',
+            'JAI': 'Jaipur',
+            'AMD': 'Ahmedabad',
+
+            // City Names
+            'BANGALORE': 'Bangalore',
+            'MUMBAI': 'Mumbai',
+            'DELHI': 'Delhi',
+            'CHENNAI': 'Chennai',
+            'KOLKATA': 'Kolkata',
+            'HYDERABAD': 'Hyderabad',
+            'GOA': 'Goa',
+            'PUNE': 'Pune',
+            'JAIPUR': 'Jaipur',
+            'AHMEDABAD': 'Ahmedabad'
+        };
+
+        // Normalize input: remove spaces, convert to upper case
+        const normalizedInput = String(gps).replace(/\s/g, '').toUpperCase();
+
+        return cityMap[normalizedInput] || cityMap[String(gps).toUpperCase()] || null;
+    }
+
+    /**
      * Search for available buses from database
      */
     async searchBuses(startLocation, endLocation, travelTime) {
         try {
+            const fs = require('fs');
+            fs.appendFileSync('bus_debug.log', `\n--- Search Request ---\nGPS: ${startLocation} -> ${endLocation}\nTime: ${travelTime}\n`);
+
             console.log(`🔍 Searching buses from ${startLocation} to ${endLocation} on ${travelTime}`);
 
-            // For buses, we can try to match city names roughly from the location GPS or address
-            // For simplicity in this demo, we'll assume the search is for "Bangalore" to "Delhi" 
-            // if coordinates match roughly, or just return all active buses for the route.
+            // Convert GPS coordinates to city names
+            const departureCity = this.getCityFromGps(startLocation);
+            const arrivalCity = this.getCityFromGps(endLocation);
 
-            // In a real app, we'd do geospatial query or map GPS to cities.
-            // As a fallback/demo, we'll return all buses for simplicity if no specific route logic is in place yet.
+            fs.appendFileSync('bus_debug.log', `Mapped: ${departureCity} -> ${arrivalCity}\n`);
 
+            console.log(`🏙️ Mapped cities: ${departureCity} → ${arrivalCity}`);
+
+            if (!departureCity || !arrivalCity) {
+                console.log('⚠️ Could not map GPS coordinates to cities');
+                fs.appendFileSync('bus_debug.log', '⚠️ Mapping failed\n');
+                return this.getEmptyCatalog();
+            }
+
+            // Query buses for the specific route
+            // Relaxed query: Show ALL active buses for this route regardless of date (for debugging/availability)
             let query = `
                 SELECT * FROM buses 
                 WHERE status = 'ACTIVE'
+                AND departure_city = $1 
+                AND arrival_city = $2
+                -- AND departure_time >= $3  <-- Commented out to ensure data visibility
             `;
 
-            const queryParams = [];
-
-            // Simple filtering logic could go here
-            // e.g. query += ` AND departure_city = $1` ...
+            // const queryParams = [departureCity, arrivalCity, travelTime];
+            const queryParams = [departureCity, arrivalCity];
 
             query += ` ORDER BY price`;
 
@@ -37,15 +104,16 @@ class BusService {
             const result = await db.query(query, queryParams);
 
             if (result.rows.length === 0) {
-                console.log('⚠️  No buses found in database');
+                console.log(`⚠️ No buses found for route ${departureCity} → ${arrivalCity}`);
                 return this.getEmptyCatalog();
             }
 
-            console.log(`✅ Found ${result.rows.length} buses in database`);
+            console.log(`✅ Found ${result.rows.length} buses for route ${departureCity} → ${arrivalCity}`);
 
             // Transform database records to Beckn format
             const buses = result.rows.map(bus => {
                 const departureTime = new Date(bus.departure_time);
+                const arrivalTime = new Date(bus.arrival_time);
 
                 return {
                     id: `bus-${bus.id}`,
@@ -78,9 +146,16 @@ class BusService {
                         {
                             code: "ROUTE",
                             list: [
-                                { code: "FROM", value: bus.departure_city },
-                                { code: "TO", value: bus.arrival_city },
-                                { code: "DURATION", value: `${bus.duration_minutes || 0} mins` } // fallback if NULL
+                                { code: "FROM", value: `${bus.departure_city} (${bus.departure_location || bus.departure_city})` },
+                                { code: "TO", value: `${bus.arrival_city} (${bus.arrival_location || bus.arrival_city})` },
+                                { code: "DURATION", value: `${Math.floor((bus.duration_minutes || 0) / 60)}h ${(bus.duration_minutes || 0) % 60}m` }
+                            ]
+                        },
+                        {
+                            code: "SCHEDULE",
+                            list: [
+                                { code: "DEPARTURE_TIME", value: departureTime.toISOString() },
+                                { code: "ARRIVAL_TIME", value: arrivalTime.toISOString() }
                             ]
                         }
                     ]
@@ -130,6 +205,9 @@ class BusService {
 
         } catch (error) {
             console.error('❌ Error in bus service:', error);
+            // Log to file
+            const fs = require('fs');
+            fs.appendFileSync('error.log', `${new Date().toISOString()} - ${error.message}\n${error.stack}\n`);
             throw error;
         }
     }

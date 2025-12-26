@@ -350,9 +350,9 @@ const transformBecknItem = (item, provider, transportMode) => {
         flightNumber: transportMode === 'bus' ? (item.descriptor?.code || 'BUS') : flightNumberPrefixed,
         airlineCode: provider.descriptor?.code || provider.id,
         aircraft: getTagValue(item.tags, 'AIRCRAFT_TYPE', 'MODEL') || 'N/A',
-        duration: getTagValue(item.tags, 'DURATION', 'VALUE') || '2h 30m', // Prefer tag value when present
-        departureTime: item.time?.timestamp || new Date().toISOString(),
-        arrivalTime: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(), // Add 2.5 hours default
+        duration: getTagValue(item.tags, 'ROUTE', 'DURATION') || getTagValue(item.tags, 'DURATION', 'VALUE') || '12h 0m',
+        departureTime: getTagValue(item.tags, 'SCHEDULE', 'DEPARTURE_TIME') || item.time?.timestamp || new Date().toISOString(),
+        arrivalTime: getTagValue(item.tags, 'SCHEDULE', 'ARRIVAL_TIME') || new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(), // Use actual arrival time or fallback
         departureAirport: departureAirport,
         arrivalAirport: arrivalAirport,
         originCity: originCity,
@@ -363,8 +363,8 @@ const transformBecknItem = (item, provider, transportMode) => {
         numberOfBookableSeats: getTagValue(item.tags, 'SEATS', 'AVAILABLE') || undefined,
       },
       timings: {
-        departure: item.time?.timestamp || new Date().toISOString(),
-        arrival: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString()
+        departure: getTagValue(item.tags, 'SCHEDULE', 'DEPARTURE_TIME') || item.time?.timestamp || new Date().toISOString(),
+        arrival: getTagValue(item.tags, 'SCHEDULE', 'ARRIVAL_TIME') || new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString()
       }
     };
   } else if (transportMode === 'hotel') {

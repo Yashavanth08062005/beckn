@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Bus Search</title>
+</head>
+<body>
+    <h1>Debug Bus Search - BLR to GOI</h1>
+    
+    <button onclick="testBusSearch()">Test Bus Search</button>
+    <button onclick="testFlightSearch()">Test Flight Search</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function testBusSearch() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing bus search...</p>';
+            
+            try {
+                const searchData = {
+                    origin: "BLR",
+                    destination: "GOI", 
+                    travelDate: "2025-12-26",
+                    transportMode: "bus",
+                    passengers: "1"
+                };
+                
+                console.log('🔍 Testing bus search with data:', searchData);
+                
+                const response = await fetch('http://localhost:8081/beckn/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        context: {
+                            domain: "mobility",
+                            country: "IND",
+                            city: "std:080", 
+                            action: "search",
+                            core_version: "1.1.0",
+                            bap_id: "travel-discovery-bap.example.com",
+                            bap_uri: "http://localhost:8081",
+                            transaction_id: `txn-${Date.now()}`,
+                            message_id: `msg-${Date.now()}`,
+                            timestamp: new Date().toISOString(),
+                            ttl: "PT30S"
+                        },
+                        message: {
+                            intent: {
+                                category: {
+                                    id: "MOBILITY"
+                                },
+                                fulfillment: {
+                                    start: {
+                                        location: {
+                                            gps: "12.9716,77.5946" // BLR
+                                        }
+                                    },
+                                    end: {
+                                        location: {
+                                            gps: "15.3808,73.8389" // GOI
+                                        }
+                                    },
+                                    time: {
+                                        range: {
+                                            start: new Date(searchData.travelDate + 'T00:00:00').toISOString(),
+                                            end: new Date(searchData.travelDate + 'T23:59:59').toISOString()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('📥 Response:', data);
+                
+                const catalog = data?.message?.catalog;
+                if (catalog && catalog.providers) {
+                    let html = '<h2>✅ Bus Search Results:</h2>';
+                    let totalItems = 0;
+                    
+                    catalog.providers.forEach(provider => {
+                        if (provider.items) {
+                            provider.items.forEach(item => {
+                                if (item.category_id === 'BUS') {
+                                    totalItems++;
+                                    const routeTag = item.tags?.find(t => t.code === 'ROUTE');
+                                    const from = routeTag?.list?.find(l => l.code === 'FROM')?.value || '';
+                                    const to = routeTag?.list?.find(l => l.code === 'TO')?.value || '';
+                                    
+                                    html += `
+                                        <div style="border: 1px solid #ccc; margin: 10px; padding: 10px;">
+                                            <h3>${item.descriptor?.name} - ${item.descriptor?.code}</h3>
+                                            <p>Price: ₹${item.price?.value}</p>
+                                            <p>Route: ${from} → ${to}</p>
+                                            <p>Category: ${item.category_id}</p>
+                                        </div>
+                                    `;
+                                }
+                            });
+                        }
+                    });
+                    
+                    html += `<p><strong>Total buses found: ${totalItems}</strong></p>`;
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = '<p>❌ No results found</p>';
+                }
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                resultsDiv.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function testFlightSearch() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing flight search...</p>';
+            
+            // Similar logic but for flights
+            console.log('🔍 Testing flight search...');
+            resultsDiv.innerHTML = '<p>Flight search test - check console</p>';
+        }
+    </script>
+</body>
+</html>

@@ -12,6 +12,8 @@ class BecknController {
     async search(req, res) {
         try {
             const { context, message } = req.body;
+            const fs = require('fs');
+            fs.appendFileSync('controller_info.log', `${new Date().toISOString()} - Received search: ${JSON.stringify(message)}\n`);
 
             console.log('🔍 Buses BPP received search request:', {
                 transaction_id: context?.transaction_id,
@@ -23,6 +25,8 @@ class BecknController {
             const startLocation = intent?.fulfillment?.start?.location?.gps || "12.9716,77.5946";
             const endLocation = intent?.fulfillment?.end?.location?.gps || "19.0760,72.8777";
             const travelTime = intent?.fulfillment?.time?.range?.start || new Date().toISOString();
+
+            fs.appendFileSync('controller_info.log', `${new Date().toISOString()} - Params: ${startLocation}, ${endLocation}, ${travelTime}\n`);
 
             // Get bus catalog
             const catalog = await busService.searchBuses(startLocation, endLocation, travelTime);
@@ -42,11 +46,16 @@ class BecknController {
                 }
             };
 
-            console.log(`🚌 Buses BPP returning ${catalog.providers[0].items.length} bus options`);
+            const itemCount = catalog.providers?.[0]?.items?.length || 0;
+            console.log(`🚌 Buses BPP returning ${itemCount} bus options`);
+
             return res.status(200).json(response);
 
         } catch (error) {
             console.error('Error in bus search:', error);
+            const fs = require('fs');
+            fs.appendFileSync('controller_error.log', `${new Date().toISOString()} - ${error.message}\n${error.stack}\n`);
+
             return res.status(500).json({
                 context: {
                     ...req.body.context,
