@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plane, Hotel, Calendar, MapPin, IndianRupee, Download, Eye, Loader, AlertCircle } from 'lucide-react';
+import { Plane, Hotel, Calendar, MapPin, IndianRupee, Download, Eye, Loader, AlertCircle, Bus } from 'lucide-react';
 import axios from 'axios';
 import { format } from 'date-fns';
 
@@ -11,7 +11,7 @@ const Bookings = () => {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [filter, setFilter] = useState('all'); // 'all', 'flight', 'hotel'
+    const [filter, setFilter] = useState('all'); // 'all', 'flight', 'hotel', 'bus'
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -27,16 +27,16 @@ const Bookings = () => {
             setLoading(true);
             setError('');
             const API_BASE_URL = import.meta.env.VITE_BAP_URL || 'http://localhost:8081';
-            
+
             // Fetch by user ID if available, otherwise by email
-            const endpoint = user?.id 
+            const endpoint = user?.id
                 ? `/api/bookings/user/${user.id}`
                 : `/api/bookings/email/${user?.email}`;
 
             console.log('📥 Fetching bookings from:', `${API_BASE_URL}${endpoint}`);
 
             const response = await axios.get(`${API_BASE_URL}${endpoint}`);
-            
+
             console.log('✅ Bookings fetched:', response.data);
             setBookings(response.data.bookings || []);
             setLoading(false);
@@ -108,33 +108,39 @@ const Bookings = () => {
                 <div className="mb-6 flex space-x-2 border-b border-gray-200">
                     <button
                         onClick={() => setFilter('all')}
-                        className={`px-6 py-3 font-medium transition-colors ${
-                            filter === 'all'
+                        className={`px-6 py-3 font-medium transition-colors ${filter === 'all'
                                 ? 'text-blue-600 border-b-2 border-blue-600'
                                 : 'text-gray-600 hover:text-gray-900'
-                        }`}
+                            }`}
                     >
                         All Bookings ({bookings.length})
                     </button>
                     <button
                         onClick={() => setFilter('flight')}
-                        className={`px-6 py-3 font-medium transition-colors ${
-                            filter === 'flight'
+                        className={`px-6 py-3 font-medium transition-colors ${filter === 'flight'
                                 ? 'text-blue-600 border-b-2 border-blue-600'
                                 : 'text-gray-600 hover:text-gray-900'
-                        }`}
+                            }`}
                     >
                         Flights ({bookings.filter(b => b.booking_type === 'flight').length})
                     </button>
                     <button
                         onClick={() => setFilter('hotel')}
-                        className={`px-6 py-3 font-medium transition-colors ${
-                            filter === 'hotel'
+                        className={`px-6 py-3 font-medium transition-colors ${filter === 'hotel'
                                 ? 'text-blue-600 border-b-2 border-blue-600'
                                 : 'text-gray-600 hover:text-gray-900'
-                        }`}
+                            }`}
                     >
                         Hotels ({bookings.filter(b => b.booking_type === 'hotel').length})
+                    </button>
+                    <button
+                        onClick={() => setFilter('bus')}
+                        className={`px-6 py-3 font-medium transition-colors ${filter === 'bus'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        Buses ({bookings.filter(b => b.booking_type === 'bus').length})
                     </button>
                 </div>
 
@@ -154,6 +160,8 @@ const Bookings = () => {
                                 <Plane className="h-16 w-16 mx-auto" />
                             ) : filter === 'hotel' ? (
                                 <Hotel className="h-16 w-16 mx-auto" />
+                            ) : filter === 'bus' ? (
+                                <Bus className="h-16 w-16 mx-auto" />
                             ) : (
                                 <AlertCircle className="h-16 w-16 mx-auto" />
                             )}
@@ -162,7 +170,7 @@ const Bookings = () => {
                             No bookings found
                         </h3>
                         <p className="text-gray-600 mb-6">
-                            {filter === 'all' 
+                            {filter === 'all'
                                 ? "You haven't made any bookings yet"
                                 : `You haven't booked any ${filter}s yet`
                             }
@@ -184,8 +192,10 @@ const Bookings = () => {
                                         <div className="flex items-center space-x-3 mb-3">
                                             {booking.booking_type === 'flight' ? (
                                                 <Plane className="h-6 w-6 text-blue-600" />
-                                            ) : (
+                                            ) : booking.booking_type === 'hotel' ? (
                                                 <Hotel className="h-6 w-6 text-blue-600" />
+                                            ) : (
+                                                <Bus className="h-6 w-6 text-blue-600" />
                                             )}
                                             <div>
                                                 <h3 className="text-lg font-bold text-gray-900">
@@ -198,8 +208,8 @@ const Bookings = () => {
                                             </span>
                                         </div>
 
-                                        {/* Flight Details */}
-                                        {booking.booking_type === 'flight' && (
+                                        {/* Flight & Bus Details (Similar Structure) */}
+                                        {(booking.booking_type === 'flight' || booking.booking_type === 'bus') && (
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                                 <div>
                                                     <p className="text-gray-500 mb-1">Route</p>
