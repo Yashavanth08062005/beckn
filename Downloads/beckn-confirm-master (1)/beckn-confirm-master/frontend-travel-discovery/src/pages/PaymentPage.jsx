@@ -229,8 +229,48 @@ const PaymentPage = () => {
                               type === 'bus' ? (item.descriptor?.code || item.details?.code || item.id) :
                               type === 'train' ? (item.descriptor?.code || item.details?.code || item.id) :
                               (item.details?.hotelId || item.id),
-                    origin: (type === 'flight' || type === 'bus' || type === 'train') ? (item.origin || item.details?.origin) : null,
-                    destination: (type === 'flight' || type === 'bus' || type === 'train') ? (item.destination || item.details?.destination) : null,
+                    origin: (type === 'flight' || type === 'bus' || type === 'train') ? (() => {
+                        // For trains, extract from tags and convert to city codes
+                        if (type === 'train' && item.tags) {
+                            const routeTag = item.tags.find(tag => tag.code === 'ROUTE');
+                            if (routeTag) {
+                                const fromTag = routeTag.list.find(item => item.code === 'FROM');
+                                if (fromTag) {
+                                    // Extract city code from station name like "KSR Bengaluru City Junction (SBC)" -> "BLR"
+                                    const stationName = fromTag.value;
+                                    if (stationName.includes('SBC') || stationName.includes('Bengaluru')) return 'BLR';
+                                    if (stationName.includes('NZM') || stationName.includes('Nizamuddin') || stationName.includes('Delhi')) return 'DEL';
+                                    if (stationName.includes('MAS') || stationName.includes('Chennai')) return 'MAA';
+                                    if (stationName.includes('KCG') || stationName.includes('Hyderabad')) return 'HYD';
+                                    // Extract code from parentheses as fallback
+                                    const match = stationName.match(/\(([^)]+)\)/);
+                                    return match ? match[1] : stationName.substring(0, 3).toUpperCase();
+                                }
+                            }
+                        }
+                        return item.origin || item.details?.origin;
+                    })() : null,
+                    destination: (type === 'flight' || type === 'bus' || type === 'train') ? (() => {
+                        // For trains, extract from tags and convert to city codes
+                        if (type === 'train' && item.tags) {
+                            const routeTag = item.tags.find(tag => tag.code === 'ROUTE');
+                            if (routeTag) {
+                                const toTag = routeTag.list.find(item => item.code === 'TO');
+                                if (toTag) {
+                                    // Extract city code from station name like "Hazrat Nizamuddin (NZM)" -> "DEL"
+                                    const stationName = toTag.value;
+                                    if (stationName.includes('SBC') || stationName.includes('Bengaluru')) return 'BLR';
+                                    if (stationName.includes('NZM') || stationName.includes('Nizamuddin') || stationName.includes('Delhi')) return 'DEL';
+                                    if (stationName.includes('MAS') || stationName.includes('Chennai')) return 'MAA';
+                                    if (stationName.includes('KCG') || stationName.includes('Hyderabad')) return 'HYD';
+                                    // Extract code from parentheses as fallback
+                                    const match = stationName.match(/\(([^)]+)\)/);
+                                    return match ? match[1] : stationName.substring(0, 3).toUpperCase();
+                                }
+                            }
+                        }
+                        return item.destination || item.details?.destination;
+                    })() : null,
                     departure_time: (type === 'flight' || type === 'bus' || type === 'train') ? (item.details?.departureTime || item.departureTime || item.time?.timestamp) : null,
                     arrival_time: (type === 'flight' || type === 'bus' || type === 'train') ? (item.details?.arrivalTime || item.arrivalTime) : null,
                     check_in_date: type === 'hotel' ? (item.checkIn || item.details?.checkIn) : null,
