@@ -115,50 +115,25 @@ const Bookings = () => {
             setProcessing(true);
             setError('');
 
-            // Create Beckn cancel request
-            const cancelRequest = {
-                context: {
-                    domain: selectedBooking.booking_type === 'flight' ? 'mobility' : 'hospitality',
-                    country: 'IND',
-                    city: 'std:080',
-                    action: 'cancel',
-                    core_version: '1.1.0',
-                    bap_id: 'travel-discovery-bap.example.com',
-                    bap_uri: API_BASE_URL,
-                    transaction_id: `txn-cancel-${Date.now()}`,
-                    message_id: `msg-cancel-${Date.now()}`,
-                    timestamp: new Date().toISOString(),
-                    ttl: 'PT30S'
-                },
-                message: {
-                    order_id: selectedBooking.id,
-                    cancellation_reason_id: cancellationReason,
-                    original_amount: selectedBooking.amount,
-                    descriptor: {
-                        name: 'Booking Cancellation',
-                        short_desc: `Customer requested cancellation: ${getCancellationReasonName(cancellationReason)}`
-                    }
-                }
-            };
+            console.log('🔄 Cancelling booking:', selectedBooking.booking_reference);
 
-            console.log('Sending cancel request:', cancelRequest);
+            // Use the simple cancel booking API endpoint
+            const response = await axios.patch(`${API_BASE_URL}/api/bookings/${selectedBooking.booking_reference}/cancel`);
 
-            const response = await axios.post(`${API_BASE_URL}/beckn/cancel`, cancelRequest);
+            console.log('✅ Cancel response:', response.data);
 
-            console.log('Cancel response:', response.data);
-
-            if (response.data && response.data.message) {
-                const cancelledOrder = response.data.message.order;
-                const refundAmount = cancelledOrder.payment?.params?.amount || (selectedBooking.amount - 500); // Default cancellation charge: ₹500
-                const cancellationCharges = selectedBooking.amount - refundAmount;
-                const refundId = cancelledOrder.payment?.params?.refund_id || `REF${Date.now()}`;
-
-                // Update booking status in the current list instead of removing it
+            if (response.data.success) {
+                // Update booking status in the current list
                 setBookings(prev => prev.map(booking => 
                     booking.id === selectedBooking.id 
                         ? { ...booking, booking_status: 'CANCELLED' }
                         : booking
                 ));
+
+                // Calculate refund details
+                const cancellationCharges = 500; // Default cancellation charge: ₹500
+                const refundAmount = selectedBooking.amount - cancellationCharges;
+                const refundId = `REF${Date.now()}`;
 
                 // Prepare refund details for modal
                 setRefundDetails({
@@ -177,18 +152,14 @@ const Bookings = () => {
                 setSelectedBooking(null);
                 setShowRefundModal(true);
 
-                console.log('✅ Booking cancelled and removed from list');
-                console.log('💰 Refund processed:', {
-                    originalAmount: selectedBooking.amount,
-                    cancellationCharges,
-                    refundAmount,
-                    refundId
-                });
+                console.log('✅ Booking cancelled successfully and updated in database');
+            } else {
+                setError('Failed to cancel booking. Please try again.');
             }
 
         } catch (err) {
-            console.error('Cancel booking error:', err);
-            setError('Failed to cancel booking. Please try again.');
+            console.error('❌ Cancel booking error:', err);
+            setError(err.response?.data?.error || 'Failed to cancel booking. Please try again.');
         } finally {
             setProcessing(false);
         }
