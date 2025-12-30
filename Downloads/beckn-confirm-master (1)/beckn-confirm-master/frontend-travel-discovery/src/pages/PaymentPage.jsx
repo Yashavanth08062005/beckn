@@ -222,12 +222,12 @@ const PaymentPage = () => {
                     item_id: item.id,
                     provider_id: item.providerId || 'provider-001',
                     item_name: type === 'flight' ? (item.details?.airline || item.airline) : 
-                              type === 'bus' ? (item.details?.name || item.descriptor?.name || item.name) :
-                              type === 'train' ? (item.details?.name || item.descriptor?.name || item.name) :
+                              type === 'bus' ? (item.descriptor?.name || item.details?.name || item.name) :
+                              type === 'train' ? (item.descriptor?.name || item.details?.name || item.name) :
                               (item.details?.name || item.name),
                     item_code: type === 'flight' ? (item.details?.flightNumber || item.flightNumber) : 
-                              type === 'bus' ? (item.details?.code || item.descriptor?.code || item.id) :
-                              type === 'train' ? (item.details?.code || item.descriptor?.code || item.id) :
+                              type === 'bus' ? (item.descriptor?.code || item.details?.code || item.id) :
+                              type === 'train' ? (item.descriptor?.code || item.details?.code || item.id) :
                               (item.details?.hotelId || item.id),
                     origin: (type === 'flight' || type === 'bus' || type === 'train') ? (item.origin || item.details?.origin) : null,
                     destination: (type === 'flight' || type === 'bus' || type === 'train') ? (item.destination || item.details?.destination) : null,
