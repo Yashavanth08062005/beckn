@@ -10,12 +10,12 @@ const PaymentPage = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { bookingData, item, type } = location.state || {};
-    
+
     const [processing, setProcessing] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('card');
     const [error, setError] = useState('');
     const [razorpayMethod, setRazorpayMethod] = useState('card'); // For Razorpay sub-methods
-    
+
     const [cardDetails, setCardDetails] = useState({
         cardNumber: '',
         cardHolder: '',
@@ -44,7 +44,7 @@ const PaymentPage = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        
+
         // Format card number with spaces
         if (name === 'cardNumber') {
             const formatted = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
@@ -56,7 +56,7 @@ const PaymentPage = () => {
 
     const handleRazorpayInputChange = (e) => {
         const { name, value } = e.target;
-        
+
         // Format card number with spaces for Razorpay
         if (name === 'cardNumber') {
             const formatted = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
@@ -127,7 +127,7 @@ const PaymentPage = () => {
     const confirmBooking = async (transactionId) => {
         try {
             const API_BASE_URL = import.meta.env.VITE_BAP_URL || 'http://localhost:8081';
-            
+
             // Create Beckn confirm request
             const confirmRequest = {
                 context: {
@@ -208,13 +208,13 @@ const PaymentPage = () => {
             console.log('📤 Sending Beckn confirm request:', confirmRequest);
 
             const response = await axios.post(`${API_BASE_URL}/beckn/confirm`, confirmRequest);
-            
+
             console.log('✅ Beckn confirm response:', response.data);
 
             // Save booking to database API
             try {
                 const bookingRef = `BK${Date.now().toString().slice(-8)}`;
-                
+
                 console.log('🔍 Debug - User info for booking:', {
                     userEmail: user?.email,
                     userId: user?.id,
@@ -223,111 +223,97 @@ const PaymentPage = () => {
                     finalEmail: user?.email || bookingData.passenger_email,
                     finalUserId: user?.id || null
                 });
-                
+
+                // Robust Data Extraction (Unified with PaymentSuccess.jsx)
+                // Common fallbacks
+                let itemName = item.details?.name || item.name || item.descriptor?.name;
+                let itemCode = item.details?.code || item.code || item.id;
+                let origin = item.origin;
+                let destination = item.destination;
+                let departureTime = item.details?.departureTime || item.time?.range?.start || item.time?.timestamp;
+                let arrivalTime = item.details?.arrivalTime || item.time?.range?.end;
+
+                // Type-specific overrides
+                if (type === 'flight') {
+                    itemName = item.details?.airline || item.airline || itemName;
+                    itemCode = item.details?.flightNumber || item.flightNumber || itemCode;
+                    origin = item.details?.origin || item.origin || origin;
+                    destination = item.details?.destination || item.destination || destination;
+
+                } else if (type === 'hotel') {
+                    itemName = item.details?.hotelName || item.details?.name || item.hotel_name || itemName;
+                    itemCode = item.details?.hotelId || item.hotel_code || itemCode;
+                    origin = null;
+                    destination = item.details?.city || item.city || item.location?.city?.name || destination;
+
+                    if (!destination && item.details?.address) {
+                        const addr = item.details.address;
+                        if (typeof addr === 'string') destination = addr.split(',').pop().trim();
+                        else destination = addr.city || addr.state;
+                    }
+
+                } else if (type === 'bus') {
+                    itemName = item.details?.travels || item.details?.operator || item.travels || item.bus_operator || item.operator_name || itemName;
+                    origin = item.details?.departureCity || item.details?.source || item.details?.from || item.source || item.from || origin;
+                    destination = item.details?.arrivalCity || item.details?.destination || item.details?.to || item.destination || item.to || destination;
+                    departureTime = item.details?.departureTime || item.departure_time || departureTime;
+                    arrivalTime = item.details?.arrivalTime || item.arrival_time || arrivalTime;
+
+                } else if (type === 'train') {
+                    itemName = item.details?.trainName || item.details?.name || item.train_name || item.trainName || itemName;
+                    itemCode = item.details?.trainNumber || item.train_number || itemCode;
+
+                    // Advanced Tag Parsing for Trains
+                    if (item.tags) {
+                        const routeTag = item.tags.find(tag => tag.code === 'ROUTE');
+                        if (routeTag) {
+                            const fromTag = routeTag.list.find(i => i.code === 'FROM');
+                            if (fromTag) {
+                                const val = fromTag.value;
+                                if (val.includes('SBC') || val.includes('Bengaluru')) origin = 'BLR';
+                                else if (val.includes('NZM') || val.includes('Delhi')) origin = 'DEL';
+                                else if (val.includes('MAS') || val.includes('Chennai')) origin = 'MAA';
+                                else if (val.includes('KCG') || val.includes('Hyderabad')) origin = 'HYD';
+                                else {
+                                    const match = val.match(/\(([^)]+)\)/);
+                                    origin = match ? match[1] : val.substring(0, 3).toUpperCase();
+                                }
+                            }
+                            const toTag = routeTag.list.find(i => i.code === 'TO');
+                            if (toTag) {
+                                const val = toTag.value;
+                                if (val.includes('SBC') || val.includes('Bengaluru')) destination = 'BLR';
+                                else if (val.includes('NZM') || val.includes('Delhi')) destination = 'DEL';
+                                else if (val.includes('MAS') || val.includes('Chennai')) destination = 'MAA';
+                                else if (val.includes('KCG') || val.includes('Hyderabad')) destination = 'HYD';
+                                else {
+                                    const match = val.match(/\(([^)]+)\)/);
+                                    destination = match ? match[1] : val.substring(0, 3).toUpperCase();
+                                }
+                            }
+                            const depTag = routeTag.list.find(i => i.code === 'DEPARTURE_TIME');
+                            if (depTag) departureTime = depTag.value;
+                            const arrTag = routeTag.list.find(i => i.code === 'ARRIVAL_TIME');
+                            if (arrTag) arrivalTime = arrTag.value;
+                        }
+                    }
+                    // Fallbacks logic for trains
+                    origin = origin || item.details?.fromStation || item.details?.source || item.details?.from || item.source || item.from;
+                    destination = destination || item.details?.toStation || item.details?.destination || item.details?.to || item.destination || item.to;
+                }
+
                 const bookingPayload = {
                     booking_reference: bookingRef,
-                    user_id: user?.id || null, // Set from authenticated user
+                    user_id: user?.id || null,
                     booking_type: type,
                     item_id: item.id,
                     provider_id: item.providerId || 'provider-001',
-                    item_name: type === 'flight' ? (item.details?.airline || item.airline) : 
-                              type === 'bus' ? (item.descriptor?.name || item.details?.name || item.name) :
-                              type === 'train' ? (item.descriptor?.name || item.details?.name || item.name) :
-                              (item.details?.name || item.name),
-                    item_code: type === 'flight' ? (item.details?.flightNumber || item.flightNumber) : 
-                              type === 'bus' ? (item.descriptor?.code || item.details?.code || item.id) :
-                              type === 'train' ? (item.descriptor?.code || item.details?.code || item.id) :
-                              (item.details?.hotelId || item.id),
-                    origin: (type === 'flight' || type === 'bus' || type === 'train') ? (() => {
-                        // For trains, extract from tags and convert to city codes
-                        if (type === 'train' && item.tags) {
-                            const routeTag = item.tags.find(tag => tag.code === 'ROUTE');
-                            if (routeTag) {
-                                const fromTag = routeTag.list.find(item => item.code === 'FROM');
-                                if (fromTag) {
-                                    // Extract city code from station name like "KSR Bengaluru City Junction (SBC)" -> "BLR"
-                                    const stationName = fromTag.value;
-                                    if (stationName.includes('SBC') || stationName.includes('Bengaluru')) return 'BLR';
-                                    if (stationName.includes('NZM') || stationName.includes('Nizamuddin') || stationName.includes('Delhi')) return 'DEL';
-                                    if (stationName.includes('MAS') || stationName.includes('Chennai')) return 'MAA';
-                                    if (stationName.includes('KCG') || stationName.includes('Hyderabad')) return 'HYD';
-                                    // Extract code from parentheses as fallback
-                                    const match = stationName.match(/\(([^)]+)\)/);
-                                    return match ? match[1] : stationName.substring(0, 3).toUpperCase();
-                                }
-                            }
-                        }
-                        return item.origin || item.details?.origin;
-                    })() : null,
-                    destination: (type === 'flight' || type === 'bus' || type === 'train') ? (() => {
-                        // For trains, extract from tags and convert to city codes
-                        if (type === 'train' && item.tags) {
-                            const routeTag = item.tags.find(tag => tag.code === 'ROUTE');
-                            if (routeTag) {
-                                const toTag = routeTag.list.find(item => item.code === 'TO');
-                                if (toTag) {
-                                    // Extract city code from station name like "Hazrat Nizamuddin (NZM)" -> "DEL"
-                                    const stationName = toTag.value;
-                                    if (stationName.includes('SBC') || stationName.includes('Bengaluru')) return 'BLR';
-                                    if (stationName.includes('NZM') || stationName.includes('Nizamuddin') || stationName.includes('Delhi')) return 'DEL';
-                                    if (stationName.includes('MAS') || stationName.includes('Chennai')) return 'MAA';
-                                    if (stationName.includes('KCG') || stationName.includes('Hyderabad')) return 'HYD';
-                                    // Extract code from parentheses as fallback
-                                    const match = stationName.match(/\(([^)]+)\)/);
-                                    return match ? match[1] : stationName.substring(0, 3).toUpperCase();
-                                }
-                            }
-                        }
-                        return item.destination || item.details?.destination;
-                    })() : null,
-                    departure_time: (type === 'flight' || type === 'bus' || type === 'train') ? (() => {
-                        // For trains, check multiple possible sources
-                        if (type === 'train') {
-                            // Try time.timestamp first (from train service)
-                            if (item.time?.timestamp) return item.time.timestamp;
-                            // Try tags for departure time
-                            if (item.tags) {
-                                const routeTag = item.tags.find(tag => tag.code === 'ROUTE');
-                                if (routeTag) {
-                                    const depTimeTag = routeTag.list.find(item => item.code === 'DEPARTURE_TIME');
-                                    if (depTimeTag) return depTimeTag.value;
-                                }
-                            }
-                            // Fallback to default train departure times based on train ID
-                            const trainDepartures = {
-                                'train-8-2a': '2026-01-02T04:57:56.000Z', // Rajdhani Express
-                                'train-3-2a': '2025-12-31T14:57:56.000Z', // Shatabdi Express
-                                'train-3-3a': '2025-12-31T14:57:56.000Z', // Shatabdi Express
-                                'train-2-cc': '2025-12-31T18:57:56.000Z', // Vande Bharat Express
-                            };
-                            return trainDepartures[item.id] || new Date().toISOString();
-                        }
-                        // For flights and buses, use existing logic
-                        return item.details?.departureTime || item.departureTime || item.time?.timestamp;
-                    })() : null,
-                    arrival_time: (type === 'flight' || type === 'bus' || type === 'train') ? (() => {
-                        // For trains, check multiple possible sources
-                        if (type === 'train') {
-                            // Try tags for arrival time
-                            if (item.tags) {
-                                const routeTag = item.tags.find(tag => tag.code === 'ROUTE');
-                                if (routeTag) {
-                                    const arrTimeTag = routeTag.list.find(item => item.code === 'ARRIVAL_TIME');
-                                    if (arrTimeTag) return arrTimeTag.value;
-                                }
-                            }
-                            // Fallback to default train arrival times based on train ID
-                            const trainArrivals = {
-                                'train-8-2a': '2026-01-03T14:57:56.000Z', // Rajdhani Express
-                                'train-3-2a': '2025-12-31T19:57:56.000Z', // Shatabdi Express
-                                'train-3-3a': '2025-12-31T19:57:56.000Z', // Shatabdi Express
-                                'train-2-cc': '2025-12-31T20:57:56.000Z', // Vande Bharat Express
-                            };
-                            return trainArrivals[item.id] || new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(); // +5 hours default
-                        }
-                        // For flights and buses, use existing logic
-                        return item.details?.arrivalTime || item.arrivalTime;
-                    })() : null,
+                    item_name: itemName,
+                    item_code: itemCode,
+                    origin: origin,
+                    destination: destination,
+                    departure_time: departureTime,
+                    arrival_time: arrivalTime,
                     check_in_date: type === 'hotel' ? (item.checkIn || item.details?.checkIn) : null,
                     check_out_date: type === 'hotel' ? (item.checkOut || item.details?.checkOut) : null,
                     passenger_name: bookingData.passenger_name,
@@ -366,11 +352,11 @@ const PaymentPage = () => {
                     formEmail: bookingData.passenger_email,
                     finalEmail: user?.email || bookingData.passenger_email
                 });
-                
+
                 console.log('💾 Saving booking to database:', bookingPayload);
 
                 const bookingResponse = await axios.post(`${API_BASE_URL}/api/bookings`, bookingPayload);
-                
+
                 console.log('✅ Booking saved successfully:', bookingResponse.data);
 
                 // Navigate to confirmation page with saved booking reference
@@ -392,7 +378,7 @@ const PaymentPage = () => {
 
             } catch (bookingError) {
                 console.error('❌ Error saving booking to database:', bookingError);
-                
+
                 // Still navigate to confirmation page even if database save fails
                 navigate('/booking-confirmation', {
                     state: {
@@ -453,11 +439,10 @@ const PaymentPage = () => {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod('card')}
-                                        className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                            paymentMethod === 'card'
+                                        className={`p-3 border-2 rounded-lg text-center transition-all ${paymentMethod === 'card'
                                                 ? 'border-blue-600 bg-blue-50'
                                                 : 'border-gray-200 hover:border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         <CreditCard className="h-5 w-5 mx-auto mb-1" />
                                         <span className="text-xs font-medium">Card</span>
@@ -465,11 +450,10 @@ const PaymentPage = () => {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod('razorpay')}
-                                        className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                            paymentMethod === 'razorpay'
+                                        className={`p-3 border-2 rounded-lg text-center transition-all ${paymentMethod === 'razorpay'
                                                 ? 'border-blue-600 bg-blue-50'
                                                 : 'border-gray-200 hover:border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="text-sm mb-1 font-bold text-blue-600">Rzp</div>
                                         <span className="text-xs font-medium">Razorpay</span>
@@ -477,11 +461,10 @@ const PaymentPage = () => {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod('paypal')}
-                                        className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                            paymentMethod === 'paypal'
+                                        className={`p-3 border-2 rounded-lg text-center transition-all ${paymentMethod === 'paypal'
                                                 ? 'border-blue-600 bg-blue-50'
                                                 : 'border-gray-200 hover:border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="text-sm mb-1 font-bold text-blue-600">PayPal</div>
                                         <span className="text-xs font-medium">PayPal</span>
@@ -489,11 +472,10 @@ const PaymentPage = () => {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod('upi')}
-                                        className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                            paymentMethod === 'upi'
+                                        className={`p-3 border-2 rounded-lg text-center transition-all ${paymentMethod === 'upi'
                                                 ? 'border-blue-600 bg-blue-50'
                                                 : 'border-gray-200 hover:border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="text-lg mb-1">₹</div>
                                         <span className="text-xs font-medium">UPI</span>
@@ -501,11 +483,10 @@ const PaymentPage = () => {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod('wallet')}
-                                        className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                            paymentMethod === 'wallet'
+                                        className={`p-3 border-2 rounded-lg text-center transition-all ${paymentMethod === 'wallet'
                                                 ? 'border-blue-600 bg-blue-50'
                                                 : 'border-gray-200 hover:border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="text-lg mb-1">💳</div>
                                         <span className="text-xs font-medium">Wallet</span>
@@ -652,11 +633,10 @@ const PaymentPage = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setRazorpayMethod('card')}
-                                                className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                                    razorpayMethod === 'card'
+                                                className={`p-3 border-2 rounded-lg text-center transition-all ${razorpayMethod === 'card'
                                                         ? 'border-blue-600 bg-blue-50'
                                                         : 'border-gray-200 hover:border-gray-300'
-                                                }`}
+                                                    }`}
                                             >
                                                 <CreditCard className="h-5 w-5 mx-auto mb-1" />
                                                 <span className="text-sm font-medium">Cards</span>
@@ -664,11 +644,10 @@ const PaymentPage = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setRazorpayMethod('upi')}
-                                                className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                                    razorpayMethod === 'upi'
+                                                className={`p-3 border-2 rounded-lg text-center transition-all ${razorpayMethod === 'upi'
                                                         ? 'border-blue-600 bg-blue-50'
                                                         : 'border-gray-200 hover:border-gray-300'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="text-lg mb-1">₹</div>
                                                 <span className="text-sm font-medium">UPI</span>
@@ -676,11 +655,10 @@ const PaymentPage = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setRazorpayMethod('netbanking')}
-                                                className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                                    razorpayMethod === 'netbanking'
+                                                className={`p-3 border-2 rounded-lg text-center transition-all ${razorpayMethod === 'netbanking'
                                                         ? 'border-blue-600 bg-blue-50'
                                                         : 'border-gray-200 hover:border-gray-300'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="text-lg mb-1">🏦</div>
                                                 <span className="text-sm font-medium">Net Banking</span>
@@ -688,11 +666,10 @@ const PaymentPage = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setRazorpayMethod('wallet')}
-                                                className={`p-3 border-2 rounded-lg text-center transition-all ${
-                                                    razorpayMethod === 'wallet'
+                                                className={`p-3 border-2 rounded-lg text-center transition-all ${razorpayMethod === 'wallet'
                                                         ? 'border-blue-600 bg-blue-50'
                                                         : 'border-gray-200 hover:border-gray-300'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="text-lg mb-1">💳</div>
                                                 <span className="text-sm font-medium">Wallets</span>
@@ -731,12 +708,12 @@ const PaymentPage = () => {
 
                                                 // Simulate Razorpay card payment processing
                                                 await new Promise(resolve => setTimeout(resolve, 2500));
-                                                
+
                                                 const fakePaymentId = `pay_razorpay_card_${Date.now()}`;
                                                 console.log('Demo Razorpay Card payment successful:', fakePaymentId);
-                                                
+
                                                 await confirmBooking(fakePaymentId);
-                                                
+
                                             } catch (err) {
                                                 setError(err.message || 'Payment failed. Please try again.');
                                                 setProcessing(false);
@@ -869,12 +846,12 @@ const PaymentPage = () => {
 
                                                 // Simulate UPI payment processing
                                                 await new Promise(resolve => setTimeout(resolve, 2000));
-                                                
+
                                                 const fakePaymentId = `pay_razorpay_upi_${Date.now()}`;
                                                 console.log('Demo Razorpay UPI payment successful:', fakePaymentId);
-                                                
+
                                                 await confirmBooking(fakePaymentId);
-                                                
+
                                             } catch (err) {
                                                 setError(err.message || 'UPI payment failed. Please try again.');
                                                 setProcessing(false);
@@ -950,14 +927,14 @@ const PaymentPage = () => {
                                                     try {
                                                         setProcessing(true);
                                                         setError('');
-                                                        
+
                                                         await new Promise(resolve => setTimeout(resolve, 2500));
-                                                        
+
                                                         const fakePaymentId = `pay_razorpay_nb_${Date.now()}`;
                                                         console.log('Demo Razorpay Net Banking payment successful:', fakePaymentId);
-                                                        
+
                                                         await confirmBooking(fakePaymentId);
-                                                        
+
                                                     } catch (err) {
                                                         setError('Net Banking payment failed. Please try again.');
                                                         setProcessing(false);
@@ -1010,14 +987,14 @@ const PaymentPage = () => {
                                                     try {
                                                         setProcessing(true);
                                                         setError('');
-                                                        
+
                                                         await new Promise(resolve => setTimeout(resolve, 1800));
-                                                        
+
                                                         const fakePaymentId = `pay_razorpay_wallet_${Date.now()}`;
                                                         console.log('Demo Razorpay Wallet payment successful:', fakePaymentId);
-                                                        
+
                                                         await confirmBooking(fakePaymentId);
-                                                        
+
                                                     } catch (err) {
                                                         setError('Wallet payment failed. Please try again.');
                                                         setProcessing(false);
@@ -1076,7 +1053,7 @@ const PaymentPage = () => {
                                                 🚧 Demo PayPal Integration
                                             </p>
                                             <p className="text-xs text-yellow-700">
-                                                This simulates PayPal payment without real transactions. 
+                                                This simulates PayPal payment without real transactions.
                                                 Click the button below to simulate a successful PayPal payment.
                                             </p>
                                         </div>
@@ -1087,18 +1064,18 @@ const PaymentPage = () => {
                                                 try {
                                                     setProcessing(true);
                                                     setError('');
-                                                    
+
                                                     // Simulate PayPal payment processing
                                                     await new Promise(resolve => setTimeout(resolve, 2000));
-                                                    
+
                                                     // Generate fake PayPal transaction ID
                                                     const fakeTransactionId = `PAYPAL_DEMO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                                                    
+
                                                     console.log('Demo PayPal payment successful:', fakeTransactionId);
-                                                    
+
                                                     // Call the confirm booking function with fake PayPal transaction ID
                                                     await confirmBooking(fakeTransactionId);
-                                                    
+
                                                 } catch (err) {
                                                     console.error('Demo PayPal payment error:', err);
                                                     setError('Demo PayPal payment failed. Please try again.');
@@ -1225,7 +1202,7 @@ const PaymentPage = () => {
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-xl shadow-md p-6 sticky top-6">
                             <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
-                            
+
                             {type === 'flight' && (
                                 <div className="space-y-3 mb-6">
                                     <div className="flex items-start">

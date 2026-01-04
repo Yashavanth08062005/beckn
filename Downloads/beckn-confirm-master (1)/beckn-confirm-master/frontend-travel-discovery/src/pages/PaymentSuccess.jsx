@@ -59,30 +59,99 @@ const PaymentSuccess = () => {
             console.log('Detected User ID for booking:', userId);
 
             // Robust data extraction for different booking types
-            let itemName = item.details?.name || item.name;
+            // Common fallbacks
+            let itemName = item.details?.name || item.name || item.descriptor?.name;
             let itemCode = item.details?.code || item.code || item.id;
             let origin = item.origin;
             let destination = item.destination;
-            let departureTime = item.details?.departureTime;
-            let arrivalTime = item.details?.arrivalTime;
+            let departureTime = item.details?.departureTime || item.time?.range?.start || item.time?.timestamp;
+            let arrivalTime = item.details?.arrivalTime || item.time?.range?.end;
 
-            // Type-specific overrides
+            // Type-specific overrides with aggressive fallbacks
             if (type === 'flight') {
-                itemName = item.details?.airline;
-                itemCode = item.details?.flightNumber;
+                itemName = item.details?.airline || item.airline || itemName;
+                itemCode = item.details?.flightNumber || item.flight_number || itemCode;
+                origin = item.details?.origin || item.origin || origin;
+                destination = item.details?.destination || item.destination || destination;
+
             } else if (type === 'hotel') {
-                itemCode = item.details?.hotelId;
+                // Hotel specific mappings
+                itemName = item.details?.hotelName || item.details?.name || item.hotel_name || itemName;
+                itemCode = item.details?.hotelId || item.hotel_code || itemCode;
                 origin = null; // Hotels don't have origin
-                destination = item.details?.city || item.city;
+                destination = item.details?.city || item.city || item.location?.city?.name || destination;
+
+                // Fallback for location if city is missing
+                if (!destination && item.details?.address) {
+                    const addr = item.details.address;
+                    if (typeof addr === 'string') destination = addr.split(',').pop().trim();
+                    else destination = addr.city || addr.state;
+                }
+
             } else if (type === 'bus') {
-                itemName = item.details?.operator || item.operator_name;
-                origin = item.details?.departureCity || item.origin;
-                destination = item.details?.arrivalCity || item.destination;
+                // Bus specific mappings
+                itemName = item.details?.travels || item.details?.operator || item.travels || item.bus_operator || item.operator_name || itemName;
+
+                // Use explicit bus fields if available
+                origin = item.details?.departureCity || item.details?.source || item.details?.from || item.source || item.from || origin;
+                destination = item.details?.arrivalCity || item.details?.destination || item.details?.to || item.destination || item.to || destination;
+
+                departureTime = item.details?.departureTime || item.departure_time || departureTime;
+                arrivalTime = item.details?.arrivalTime || item.arrival_time || arrivalTime;
+
             } else if (type === 'train') {
-                itemName = item.details?.trainName || item.train_name;
-                itemCode = item.details?.trainNumber || item.train_number;
-                origin = item.details?.fromStation || item.origin;
-                destination = item.details?.toStation || item.destination;
+                // Train specific mappings
+                itemName = item.details?.trainName || item.details?.name || item.train_name || item.trainName || itemName;
+                itemCode = item.details?.trainNumber || item.train_number || itemCode;
+
+                // Advanced Tag Parsing for Trains (Ported from PaymentPage)
+                if (item.tags) {
+                    const routeTag = item.tags.find(tag => tag.code === 'ROUTE');
+                    if (routeTag) {
+                        // Origin
+                        const fromTag = routeTag.list.find(i => i.code === 'FROM');
+                        if (fromTag) {
+                            const val = fromTag.value;
+                            // Map known stations to city codes
+                            if (val.includes('SBC') || val.includes('Bengaluru')) origin = 'BLR';
+                            else if (val.includes('NZM') || val.includes('Delhi')) origin = 'DEL';
+                            else if (val.includes('MAS') || val.includes('Chennai')) origin = 'MAA';
+                            else if (val.includes('KCG') || val.includes('Hyderabad')) origin = 'HYD';
+                            else {
+                                const match = val.match(/\(([^)]+)\)/);
+                                origin = match ? match[1] : val.substring(0, 3).toUpperCase();
+                            }
+                        }
+
+                        // Destination
+                        const toTag = routeTag.list.find(i => i.code === 'TO');
+                        if (toTag) {
+                            const val = toTag.value;
+                            if (val.includes('SBC') || val.includes('Bengaluru')) destination = 'BLR';
+                            else if (val.includes('NZM') || val.includes('Delhi')) destination = 'DEL';
+                            else if (val.includes('MAS') || val.includes('Chennai')) destination = 'MAA';
+                            else if (val.includes('KCG') || val.includes('Hyderabad')) destination = 'HYD';
+                            else {
+                                const match = val.match(/\(([^)]+)\)/);
+                                destination = match ? match[1] : val.substring(0, 3).toUpperCase();
+                            }
+                        }
+
+                        // Times
+                        const depTag = routeTag.list.find(i => i.code === 'DEPARTURE_TIME');
+                        if (depTag) departureTime = depTag.value;
+
+                        const arrTag = routeTag.list.find(i => i.code === 'ARRIVAL_TIME');
+                        if (arrTag) arrivalTime = arrTag.value;
+                    }
+                }
+
+                // Fallbacks if tags failed or missing
+                origin = origin || item.details?.fromStation || item.details?.source || item.details?.from || item.source || item.from;
+                destination = destination || item.details?.toStation || item.details?.destination || item.details?.to || item.destination || item.to;
+
+                departureTime = departureTime || item.details?.departureTime || item.departure_time;
+                arrivalTime = arrivalTime || item.details?.arrivalTime || item.arrival_time;
             }
 
             const bookingPayload = {
