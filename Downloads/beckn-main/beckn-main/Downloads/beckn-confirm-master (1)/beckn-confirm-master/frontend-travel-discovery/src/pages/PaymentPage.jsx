@@ -259,8 +259,8 @@ const PaymentPage = () => {
                     itemName = item.details?.travels || item.details?.operator || item.travels || item.bus_operator || item.operator_name || itemName;
                     origin = item.details?.departureCity || item.details?.source || item.details?.from || item.source || item.from || origin;
                     destination = item.details?.arrivalCity || item.details?.destination || item.details?.to || item.destination || item.to || destination;
-                    departureTime = item.details?.departureTime || item.departure_time || departureTime;
-                    arrivalTime = item.details?.arrivalTime || item.arrival_time || arrivalTime;
+                    departureTime = item.details?.departureTime || item.departure_time || item.time?.range?.start || item.timings?.departure || departureTime;
+                    arrivalTime = item.details?.arrivalTime || item.arrival_time || item.time?.range?.end || item.timings?.arrival || arrivalTime;
 
                 } else if (type === 'train') {
                     itemName = item.details?.trainName || item.details?.name || item.train_name || item.trainName || itemName;
@@ -303,6 +303,9 @@ const PaymentPage = () => {
                     // Fallbacks logic for trains
                     origin = origin || item.details?.fromStation || item.details?.source || item.details?.from || item.source || item.from;
                     destination = destination || item.details?.toStation || item.details?.destination || item.details?.to || item.destination || item.to;
+
+                    departureTime = departureTime || item.details?.departureTime || item.departure_time || item.time?.range?.start || item.timings?.departure;
+                    arrivalTime = arrivalTime || item.details?.arrivalTime || item.arrival_time || item.time?.range?.end || item.timings?.arrival;
                 }
 
                 const bookingPayload = {

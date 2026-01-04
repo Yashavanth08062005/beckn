@@ -48,7 +48,7 @@ class BookingController {
                 order_id,
                 item_details,
                 booking_metadata
-            } = req.body;
+            };
 
             logger.info('Creating new booking', { booking_reference, user_id });
 

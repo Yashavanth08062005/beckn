@@ -74,6 +74,9 @@ const PaymentSuccess = () => {
                 origin = item.details?.origin || item.origin || origin;
                 destination = item.details?.destination || item.destination || destination;
 
+                departureTime = item.details?.departureTime || item.departure_time || item.time?.range?.start || item.timings?.departure || departureTime;
+                arrivalTime = item.details?.arrivalTime || item.arrival_time || item.time?.range?.end || item.timings?.arrival || arrivalTime;
+
             } else if (type === 'hotel') {
                 // Hotel specific mappings
                 itemName = item.details?.hotelName || item.details?.name || item.hotel_name || itemName;
@@ -88,6 +91,10 @@ const PaymentSuccess = () => {
                     else destination = addr.city || addr.state;
                 }
 
+                // For hotels, map check-in/out to departure/arrival columns effectively
+                departureTime = item.details?.checkIn || item.check_in || item.time?.range?.start || departureTime;
+                arrivalTime = item.details?.checkOut || item.check_out || item.time?.range?.end || arrivalTime;
+
             } else if (type === 'bus') {
                 // Bus specific mappings
                 itemName = item.details?.travels || item.details?.operator || item.travels || item.bus_operator || item.operator_name || itemName;
@@ -96,8 +103,8 @@ const PaymentSuccess = () => {
                 origin = item.details?.departureCity || item.details?.source || item.details?.from || item.source || item.from || origin;
                 destination = item.details?.arrivalCity || item.details?.destination || item.details?.to || item.destination || item.to || destination;
 
-                departureTime = item.details?.departureTime || item.departure_time || departureTime;
-                arrivalTime = item.details?.arrivalTime || item.arrival_time || arrivalTime;
+                departureTime = item.details?.departureTime || item.departure_time || item.time?.range?.start || item.timings?.departure || departureTime;
+                arrivalTime = item.details?.arrivalTime || item.arrival_time || item.time?.range?.end || item.timings?.arrival || arrivalTime;
 
             } else if (type === 'train') {
                 // Train specific mappings
@@ -150,18 +157,15 @@ const PaymentSuccess = () => {
                 origin = origin || item.details?.fromStation || item.details?.source || item.details?.from || item.source || item.from;
                 destination = destination || item.details?.toStation || item.details?.destination || item.details?.to || item.destination || item.to;
 
-                departureTime = departureTime || item.details?.departureTime || item.departure_time || item.descriptor?.short_desc?.split(' ')[0] || item.time?.range?.start; // Added fallbacks
-                arrivalTime = arrivalTime || item.details?.arrivalTime || item.arrival_time || item.time?.range?.end;
+                departureTime = departureTime || item.details?.departureTime || item.departure_time || item.descriptor?.short_desc?.split(' ')[0] || item.time?.range?.start || item.timings?.departure;
+                arrivalTime = arrivalTime || item.details?.arrivalTime || item.arrival_time || item.time?.range?.end || item.timings?.arrival;
 
                 // IMPORTANT: Update item.details so BookingConfirmation sees the correct time
                 if (!item.details) item.details = {};
                 if (departureTime) item.details.departureTime = departureTime;
                 if (arrivalTime) item.details.arrivalTime = arrivalTime;
 
-                // Fallbacks if tags failed or missing
-                origin = origin || item.details?.fromStation || item.details?.source || item.details?.from || item.source || item.from;
-                destination = destination || item.details?.toStation || item.details?.destination || item.details?.to || item.destination || item.to;
-
+                // Fallbacks (legacy)
                 departureTime = departureTime || item.details?.departureTime || item.departure_time;
                 arrivalTime = arrivalTime || item.details?.arrivalTime || item.arrival_time;
             }
