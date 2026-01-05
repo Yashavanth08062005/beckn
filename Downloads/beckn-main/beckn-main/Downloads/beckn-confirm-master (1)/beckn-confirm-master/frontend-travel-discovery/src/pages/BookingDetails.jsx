@@ -7,12 +7,23 @@ import axios from 'axios';
 const BookingDetails = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
-    const selectedFlight = location.state?.flight;
+    // Initialize selectedFlight from location.state or sessionStorage
+    const [selectedFlight, setSelectedFlight] = useState(() => {
+        const savedFlight = sessionStorage.getItem('currentBookingFlight');
+        return location.state?.flight || (savedFlight ? JSON.parse(savedFlight) : null);
+    });
+
+    // Save flight to sessionStorage when available
+    useEffect(() => {
+        if (selectedFlight) {
+            sessionStorage.setItem('currentBookingFlight', JSON.stringify(selectedFlight));
+        }
+    }, [selectedFlight]);
 
     // Debug: Log flight data to see structure
     useEffect(() => {
@@ -37,25 +48,114 @@ const BookingDetails = () => {
         passport_number: '',
         nationality: 'Indian'
     });
+    const [errors, setErrors] = useState({});
+
+    // Update formData when user data becomes available
+    useEffect(() => {
+        if (user) {
+            setFormData(prev => ({
+                ...prev,
+                passenger_name: prev.passenger_name || user.full_name || '',
+                email: prev.email || user.email || '',
+                phone: prev.phone || user.phone || ''
+            }));
+        }
+    }, [user]);
 
     useEffect(() => {
+        if (authLoading) return; // Wait for auth check to complete
+
         if (!isAuthenticated) {
-            navigate('/login', { state: { from: '/booking' } });
+            // Save current path to redirect back after login
+            navigate('/login', { state: { from: location.pathname } });
+            return;
         }
         if (!selectedFlight) {
             navigate('/');
         }
-    }, [isAuthenticated, selectedFlight, navigate]);
+    }, [isAuthenticated, authLoading, selectedFlight, navigate, location.pathname]);
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="flex flex-col items-center">
+                    <svg className="animate-spin h-10 w-10 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p className="text-gray-600 font-medium">Loading booking details...</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+
+        // Special handling for phone number: numbers only, max 10 digits
+        if (name === 'phone') {
+            const numericValue = value.replace(/\D/g, '').slice(0, 10);
+            setFormData({
+                ...formData,
+                [name]: numericValue
+            });
+        } else {
+            setFormData({
+                ...formData,
+                [name]: value
+            });
+        }
+
+        // Clear error when user types
+        if (errors[name]) {
+            setErrors({
+                ...errors,
+                [name]: ''
+            });
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        if (!formData.passenger_name.trim()) newErrors.passenger_name = 'Full Name is required';
+        if (!formData.date_of_birth) newErrors.date_of_birth = 'Date of Birth is required';
+        if (!formData.nationality.trim()) newErrors.nationality = 'Nationality is required';
+
+        if (!formData.email.trim()) {
+            newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            newErrors.email = 'Email is invalid';
+        }
+
+        if (!formData.phone.trim()) {
+            newErrors.phone = 'Phone Number is required';
+        } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
+            newErrors.phone = 'Phone number must be 10 digits';
+        }
+
+        if (!formData.address.trim()) newErrors.address = 'Street Address is required';
+        if (!formData.city.trim()) newErrors.city = 'City is required';
+        if (!formData.state.trim()) newErrors.state = 'State is required';
+
+        if (!formData.pincode.trim()) {
+            newErrors.pincode = 'Pincode is required';
+        } else if (!/^\d{6}$/.test(formData.pincode)) {
+            newErrors.pincode = 'Pincode must be 6 digits';
+        }
+
+        if (!formData.country.trim()) newErrors.country = 'Country is required';
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!validateForm()) {
+            return;
+        }
+
         setError('');
         setLoading(true);
 
@@ -128,15 +228,15 @@ const BookingDetails = () => {
 
             console.log('Select Response:', selectResponse.data);
             setSuccess(true);
-            
+
             // Redirect to confirmation page after 2 seconds
             setTimeout(() => {
-                navigate('/booking-confirmation', { 
-                    state: { 
+                navigate('/booking-confirmation', {
+                    state: {
                         booking: selectResponse.data,
                         flight: selectedFlight,
                         passenger: formData
-                    } 
+                    }
                 });
             }, 2000);
 
@@ -184,7 +284,7 @@ const BookingDetails = () => {
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-xl shadow-md p-6 sticky top-6">
                             <h2 className="text-xl font-bold text-gray-900 mb-4">Flight Details</h2>
-                            
+
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-sm text-gray-500">Airline</p>
@@ -291,12 +391,12 @@ const BookingDetails = () => {
                                             <input
                                                 type="text"
                                                 name="passenger_name"
-                                                required
                                                 value={formData.passenger_name}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.passenger_name ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder="Enter full name"
                                             />
+                                            {errors.passenger_name && <p className="mt-1 text-xs text-red-500">{errors.passenger_name}</p>}
                                         </div>
 
                                         <div>
@@ -306,11 +406,11 @@ const BookingDetails = () => {
                                             <input
                                                 type="date"
                                                 name="date_of_birth"
-                                                required
                                                 value={formData.date_of_birth}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.date_of_birth ? 'border-red-500' : 'border-gray-300'}`}
                                             />
+                                            {errors.date_of_birth && <p className="mt-1 text-xs text-red-500">{errors.date_of_birth}</p>}
                                         </div>
 
                                         <div>
@@ -320,12 +420,12 @@ const BookingDetails = () => {
                                             <input
                                                 type="text"
                                                 name="nationality"
-                                                required
                                                 value={formData.nationality}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.nationality ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder="Indian"
                                             />
+                                            {errors.nationality && <p className="mt-1 text-xs text-red-500">{errors.nationality}</p>}
                                         </div>
 
                                         <div>
@@ -358,12 +458,12 @@ const BookingDetails = () => {
                                             <input
                                                 type="email"
                                                 name="email"
-                                                required
                                                 value={formData.email}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder="your@email.com"
                                             />
+                                            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
                                         </div>
 
                                         <div>
@@ -373,12 +473,14 @@ const BookingDetails = () => {
                                             <input
                                                 type="tel"
                                                 name="phone"
-                                                required
                                                 value={formData.phone}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                placeholder="+91 1234567890"
+                                                maxLength={10}
+                                                inputMode="numeric"
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                                                placeholder="9876543210"
                                             />
+                                            {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -397,12 +499,12 @@ const BookingDetails = () => {
                                             <input
                                                 type="text"
                                                 name="address"
-                                                required
                                                 value={formData.address}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder="House no, Street name"
                                             />
+                                            {errors.address && <p className="mt-1 text-xs text-red-500">{errors.address}</p>}
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -413,12 +515,12 @@ const BookingDetails = () => {
                                                 <input
                                                     type="text"
                                                     name="city"
-                                                    required
                                                     value={formData.city}
                                                     onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.city ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="City"
                                                 />
+                                                {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city}</p>}
                                             </div>
 
                                             <div>
@@ -428,12 +530,12 @@ const BookingDetails = () => {
                                                 <input
                                                     type="text"
                                                     name="state"
-                                                    required
                                                     value={formData.state}
                                                     onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.state ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="State"
                                                 />
+                                                {errors.state && <p className="mt-1 text-xs text-red-500">{errors.state}</p>}
                                             </div>
 
                                             <div>
@@ -443,12 +545,12 @@ const BookingDetails = () => {
                                                 <input
                                                     type="text"
                                                     name="pincode"
-                                                    required
                                                     value={formData.pincode}
                                                     onChange={handleChange}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.pincode ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="123456"
                                                 />
+                                                {errors.pincode && <p className="mt-1 text-xs text-red-500">{errors.pincode}</p>}
                                             </div>
                                         </div>
 
@@ -459,12 +561,12 @@ const BookingDetails = () => {
                                             <input
                                                 type="text"
                                                 name="country"
-                                                required
                                                 value={formData.country}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.country ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder="India"
                                             />
+                                            {errors.country && <p className="mt-1 text-xs text-red-500">{errors.country}</p>}
                                         </div>
                                     </div>
                                 </div>

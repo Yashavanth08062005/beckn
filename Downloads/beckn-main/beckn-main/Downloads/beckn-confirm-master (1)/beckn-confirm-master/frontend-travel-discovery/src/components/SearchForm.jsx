@@ -17,6 +17,8 @@ const SearchForm = ({ prefill }) => {
     rooms: 1,
   });
 
+  const minDate = new Date().toISOString().split('T')[0];
+
 
   useEffect(() => {
     if (prefill.origin || prefill.destination) {
@@ -102,6 +104,7 @@ const SearchForm = ({ prefill }) => {
                   type="date"
                   name="travelDate"
                   value={searchData.travelDate}
+                  min={minDate}
                   onChange={handleChange}
                   className="input-field pl-10"
                   required
@@ -153,6 +156,7 @@ const SearchForm = ({ prefill }) => {
                   type="date"
                   name="travelDate"
                   value={searchData.travelDate}
+                  min={minDate}
                   onChange={handleChange}
                   className="input-field pl-10"
                   required
@@ -204,6 +208,7 @@ const SearchForm = ({ prefill }) => {
                   type="date"
                   name="checkInDate"
                   value={searchData.checkInDate}
+                  min={minDate}
                   onChange={handleChange}
                   className="input-field pl-10"
                   required
@@ -222,6 +227,7 @@ const SearchForm = ({ prefill }) => {
                   type="date"
                   name="checkOutDate"
                   value={searchData.checkOutDate}
+                  min={searchData.checkInDate || minDate}
                   onChange={handleChange}
                   className="input-field pl-10"
                   required
