@@ -6,7 +6,7 @@ const env = require('./config/env');
 console.log('app.js starting...');
 
 const app = express();
-const PORT = env.PORT || 7003;
+const PORT = env.PORT || 7010;
 console.log('Creating express app on port:', PORT);
 
 // Middleware

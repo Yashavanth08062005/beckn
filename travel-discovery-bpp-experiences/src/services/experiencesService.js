@@ -18,6 +18,8 @@ class ExperiencesService {
             '18.9322,72.8264': 'Mumbai',
             '18.9568,72.8320': 'Mumbai',
             '18.9633,72.9315': 'Mumbai',
+            '19.0760,72.8777': 'Mumbai',
+            '19.0896,72.8656': 'Mumbai',
             
             // Bangalore coordinates
             '12.9716,77.5946': 'Bangalore',
@@ -27,19 +29,63 @@ class ExperiencesService {
             // Delhi coordinates
             '28.6562,77.2410': 'Delhi',
             '28.6315,77.2167': 'Delhi',
+            '28.7041,77.1025': 'Delhi',
             
             // Goa coordinates
             '15.5527,73.7603': 'Goa',
             '15.4013,74.0071': 'Goa',
+            '15.2993,74.1240': 'Goa',
             
             // Chennai coordinates
             '13.0339,80.2619': 'Chennai',
+            '13.0827,80.2707': 'Chennai',
             
             // Hyderabad coordinates
-            '17.3616,78.4747': 'Hyderabad'
+            '17.3616,78.4747': 'Hyderabad',
+            '17.3850,78.4867': 'Hyderabad'
         };
         
         return locationMap[gps] || null;
+    }
+
+    /**
+     * Normalize city name for better matching
+     */
+    normalizeCityName(cityName) {
+        if (!cityName) return null;
+        
+        const cityMap = {
+            'mumbai': 'Mumbai',
+            'bombay': 'Mumbai',
+            'bom': 'Mumbai',
+            'bangalore': 'Bangalore',
+            'bengaluru': 'Bangalore',
+            'blr': 'Bangalore',
+            'delhi': 'Delhi',
+            'new delhi': 'Delhi',
+            'del': 'Delhi',
+            'goa': 'Goa',
+            'goi': 'Goa',
+            'chennai': 'Chennai',
+            'madras': 'Chennai',
+            'maa': 'Chennai',
+            'hyderabad': 'Hyderabad',
+            'hyd': 'Hyderabad',
+            'kolkata': 'Kolkata',
+            'calcutta': 'Kolkata',
+            'ccu': 'Kolkata',
+            'pune': 'Pune',
+            'pnq': 'Pune',
+            'jaipur': 'Jaipur',
+            'jai': 'Jaipur',
+            'ahmedabad': 'Ahmedabad',
+            'amd': 'Ahmedabad',
+            'cochien': 'Kochi',
+            'cok': 'Kochi'
+        };
+        
+        const normalized = cityName.toLowerCase().trim();
+        return cityMap[normalized] || cityName;
     }
 
     /**
@@ -49,10 +95,17 @@ class ExperiencesService {
         try {
             console.log(`🔍 Searching experiences in ${location}, category: ${category}, date: ${travelDate}`);
 
-            // Convert GPS to city if needed
-            const searchCity = this.gpsToLocation(location) || location;
+            // Convert GPS to city if needed, or normalize city name
+            let searchCity = null;
+            if (location && location.includes(',')) {
+                // It's GPS coordinates
+                searchCity = this.gpsToLocation(location);
+            } else if (location) {
+                // It's a city name
+                searchCity = this.normalizeCityName(location);
+            }
             
-            console.log(`📍 Searching in city: ${searchCity}`);
+            console.log(`📍 Searching in city: ${searchCity} (from location: ${location})`);
 
             // Build query with optional filtering
             let query = `
@@ -69,7 +122,7 @@ class ExperiencesService {
             }
             
             // Add category filter if available
-            if (category && category !== 'ALL') {
+            if (category && typeof category === 'string' && category !== 'ALL') {
                 queryParams.push(category.toUpperCase());
                 query += ` AND category = $${queryParams.length}`;
             }

@@ -74,7 +74,7 @@ const FilterSidebar = ({ filters, setFilters }) => {
           Travel Mode
         </label>
         <div className="space-y-2">
-          {["flight", "train", "bus"].map((mode) => (
+          {["flight", "train", "bus", "experience"].map((mode) => (
             <label
               key={mode}
               className="flex items-center space-x-2 cursor-pointer"

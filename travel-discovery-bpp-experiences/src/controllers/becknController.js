@@ -13,10 +13,31 @@ class BecknController {
 
             console.log('🔍 [SEARCH] Calling searchExperiences service');
             const intent = message?.intent || {};
-            const location = intent?.fulfillment?.start?.location?.address?.city || intent?.fulfillment?.end?.location?.gps || "12.9716,77.5946"; // Prefer city name for filtering
+            
+            // Extract location from different possible sources
+            let location = null;
+            
+            // Try to get city name first
+            if (intent?.fulfillment?.start?.location?.city?.name) {
+                location = intent.fulfillment.start.location.city.name;
+            } else if (intent?.fulfillment?.start?.location?.address?.city) {
+                location = intent.fulfillment.start.location.address.city;
+            } else if (intent?.fulfillment?.end?.location?.city?.name) {
+                location = intent.fulfillment.end.location.city.name;
+            } else if (intent?.fulfillment?.start?.location?.gps) {
+                location = intent.fulfillment.start.location.gps;
+            } else if (intent?.fulfillment?.end?.location?.gps) {
+                location = intent.fulfillment.end.location.gps;
+            } else {
+                location = "12.9716,77.5946"; // Default to Bangalore
+            }
+            
+            console.log('🔍 [SEARCH] Extracted location:', location);
+            
+            const category = intent?.category || null; // Extract category if provided
             const date = intent?.fulfillment?.time?.range?.start || new Date().toISOString();
 
-            const catalog = await experiencesService.searchExperiences(location, date);
+            const catalog = await experiencesService.searchExperiences(location, category, date);
             console.log('🔍 [SEARCH] Got catalog, sending response');
 
 
@@ -25,7 +46,7 @@ class BecknController {
                     ...context,
                     action: "on_search",
                     bpp_id: "experiences-bpp.example.com",
-                    bpp_uri: "http://localhost:3006",
+                    bpp_uri: "http://localhost:7010",
                     message_id: uuidv4(),
                     timestamp: new Date().toISOString()
                 },
@@ -41,7 +62,7 @@ class BecknController {
         } catch (error) {
             console.error('❌ [SEARCH] Error:', error.message);
             return res.status(500).json({
-                context: { ...context, action: "on_search" },
+                context: { ...req.body.context, action: "on_search" },
                 error: {
                     type: "CORE-ERROR",
                     code: "20000",
@@ -67,7 +88,7 @@ class BecknController {
                     ...context,
                     action: "on_select",
                     bpp_id: "experiences-bpp.example.com",
-                    bpp_uri: "http://localhost:3006",
+                    bpp_uri: "http://localhost:7010",
                     message_id: uuidv4(),
                     timestamp: new Date().toISOString()
                 },
@@ -133,7 +154,7 @@ class BecknController {
                     ...context,
                     action: "on_init",
                     bpp_id: "experiences-bpp.example.com",
-                    bpp_uri: "http://localhost:3006",
+                    bpp_uri: "http://localhost:7010",
                     message_id: uuidv4(),
                     timestamp: new Date().toISOString()
                 },
@@ -194,17 +215,18 @@ class BecknController {
 
             // Extract experience ID
             const itemId = items[0].id;
+            const experienceId = itemId.replace('experience-', ''); // Extract numeric ID
 
             // Save booking to BPP database
             const bookingResult = await experiencesService.createBppBooking({
                 bppBookingId,
                 platformBookingId: order.id,
-                itemId: itemId,
-                guestName: billing?.name || 'Unknown Guest',
-                guestEmail: billing?.email || '',
-                guestPhone: billing?.phone || '',
-                date: order?.fulfillment?.start?.time?.timestamp || new Date().toISOString(),
-                numberOfGuests: order?.quantity?.count || 1,
+                experienceId: parseInt(experienceId),
+                participantName: billing?.name || 'Unknown Guest',
+                participantEmail: billing?.email || '',
+                participantPhone: billing?.phone || '',
+                bookingDate: order?.fulfillment?.start?.time?.timestamp || new Date().toISOString(),
+                numberOfParticipants: order?.quantity?.count || 1,
                 bookingStatus: 'CONFIRMED',
                 becknTransactionId: context.transaction_id,
                 becknMessageId: context.message_id
@@ -221,7 +243,7 @@ class BecknController {
                     ...context,
                     action: "on_confirm",
                     bpp_id: "experiences-bpp.example.com",
-                    bpp_uri: "http://localhost:3006",
+                    bpp_uri: "http://localhost:7010",
                     message_id: uuidv4(),
                     timestamp: new Date().toISOString()
                 },
@@ -278,7 +300,7 @@ class BecknController {
                     ...context,
                     action: "on_status",
                     bpp_id: "experiences-bpp.example.com",
-                    bpp_uri: "http://localhost:3006",
+                    bpp_uri: "http://localhost:7010",
                     message_id: uuidv4(),
                     timestamp: new Date().toISOString()
                 },
@@ -358,7 +380,7 @@ class BecknController {
                     ...context,
                     action: "on_cancel",
                     bpp_id: "experiences-bpp.example.com",
-                    bpp_uri: "http://localhost:3006",
+                    bpp_uri: "http://localhost:7010",
                     message_id: uuidv4(),
                     timestamp: new Date().toISOString()
                 },

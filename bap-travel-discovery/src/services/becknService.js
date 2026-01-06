@@ -19,7 +19,7 @@ class BecknService {
         this.hotelsBppUrl = env.HOTELS_BPP_URL || 'http://127.0.0.1:7003';
         this.busesBppUrl = env.BUSES_BPP_URL || 'http://127.0.0.1:3004';
         this.trainsBppUrl = env.TRAINS_BPP_URL || 'http://127.0.0.1:3005';
-        this.experiencesBppUrl = env.EXPERIENCES_BPP_URL || 'http://127.0.0.1:3006';
+        this.experiencesBppUrl = env.EXPERIENCES_BPP_URL || 'http://127.0.0.1:7010';
     }
 
     /**
