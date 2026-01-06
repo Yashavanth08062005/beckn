@@ -1,0 +1,611 @@
+# Beckn Protocol Layer 2 Configuration
+# Network Layer Configuration for Travel Discovery Platform
+# This configuration defines the network topology, routing, and registry services
+
+version: "2.0"
+network:
+  name: "beckn-travel-network"
+  type: "decentralized"
+  protocol_version: "1.1.0"
+  
+# Registry Configuration - Central discovery service
+registry:
+  enabled: true
+  url: "https://registry.beckn.org"
+  backup_registries:
+    - "https://backup-registry.beckn.org"
+    - "https://registry-mirror.beckn.org"
+  
+  # Registry authentication
+  auth:
+    type: "certificate"
+    certificate_path: "/etc/beckn/certs/registry.pem"
+    private_key_path: "/etc/beckn/certs/registry-key.pem"
+  
+  # Registry sync settings
+  sync:
+    interval: 300 # seconds
+    retry_attempts: 3
+    timeout: 30 # seconds
+
+# Gateway Configuration - Entry point for the network
+gateway:
+  enabled: true
+  host: "0.0.0.0"
+  port: 5555
+  
+  # Load balancing configuration
+  load_balancer:
+    algorithm: "round_robin" # round_robin, least_connections, ip_hash
+    health_check:
+      enabled: true
+      interval: 30
+      timeout: 10
+      path: "/health"
+  
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+    burst_size: 100
+    
+  # CORS configuration
+  cors:
+    enabled: true
+    allowed_origins:
+      - "http://localhost:3000"
+      - "https://travel-discovery.beckn.org"
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowed_headers: ["Content-Type", "Authorization", "X-Beckn-*"]
+
+# BAP (Beckn Application Platform) Configuration
+bap:
+  id: "travel-discovery-bap.beckn.org"
+  name: "Travel Discovery BAP"
+  description: "Multi-modal travel booking platform"
+  
+  # BAP network details
+  network:
+    host: "localhost"
+    port: 8081
+    base_url: "http://localhost:8081"
+    public_url: "https://bap.travel-discovery.beckn.org"
+  
+  # Supported domains
+  domains:
+    - "mobility"
+    - "hospitality"
+    - "tourism"
+  
+  # BAP capabilities
+  capabilities:
+    - "search"
+    - "select" 
+    - "init"
+    - "confirm"
+    - "status"
+    - "cancel"
+    - "update"
+    - "track"
+  
+  # Security configuration
+  security:
+    encryption:
+      enabled: true
+      algorithm: "AES-256-GCM"
+    
+    signing:
+      enabled: true
+      algorithm: "RS256"
+      private_key_path: "/etc/beckn/certs/bap-private.pem"
+      public_key_path: "/etc/beckn/certs/bap-public.pem"
+    
+    # Request validation
+    validation:
+      schema_validation: true
+      signature_validation: true
+      timestamp_validation: true
+      max_age: 300 # seconds
+
+# BPP (Beckn Provider Platform) Registry
+bpp_registry:
+  # Domestic Flights BPP
+  - id: "flights-domestic-bpp.beckn.org"
+    name: "Domestic Flights Provider"
+    type: "BPP"
+    domain: "mobility"
+    category: "flights"
+    subcategory: "domestic"
+    
+    network:
+      host: "localhost"
+      port: 7001
+      base_url: "http://localhost:7001"
+      public_url: "https://flights-domestic.beckn.org"
+    
+    capabilities:
+      - "search"
+      - "select"
+      - "init" 
+      - "confirm"
+      - "status"
+      - "cancel"
+    
+    coverage:
+      geographic:
+        - "IN" # India
+      cities:
+        - "BLR" # Bangalore
+        - "BOM" # Mumbai  
+        - "DEL" # Delhi
+        - "HYD" # Hyderabad
+        - "MAA" # Chennai
+        - "CCU" # Kolkata
+        - "AMD" # Ahmedabad
+        - "PNQ" # Pune
+    
+    metadata:
+      supported_airlines:
+        - "Air India"
+        - "IndiGo"
+        - "Vistara"
+        - "SpiceJet"
+        - "GoAir"
+      
+      features:
+        - "real_time_pricing"
+        - "seat_selection"
+        - "meal_preferences"
+        - "baggage_options"
+
+  # International Flights BPP  
+  - id: "flights-international-bpp.beckn.org"
+    name: "International Flights Provider"
+    type: "BPP"
+    domain: "mobility"
+    category: "flights"
+    subcategory: "international"
+    
+    network:
+      host: "localhost"
+      port: 7005
+      base_url: "http://localhost:7005"
+      public_url: "https://flights-intl.beckn.org"
+    
+    capabilities:
+      - "search"
+      - "select"
+      - "init"
+      - "confirm" 
+      - "status"
+      - "cancel"
+    
+    coverage:
+      geographic:
+        - "GLOBAL"
+      airports:
+        - "SIN" # Singapore
+        - "DXB" # Dubai
+        - "LHR" # London
+        - "JFK" # New York
+        - "BKK" # Bangkok
+        - "HKG" # Hong Kong
+        - "NRT" # Tokyo
+        - "SYD" # Sydney
+    
+    metadata:
+      supported_airlines:
+        - "Emirates"
+        - "Singapore Airlines"
+        - "British Airways"
+        - "Qatar Airways"
+        - "Lufthansa"
+      
+      currencies:
+        - "INR"
+        - "USD"
+        - "EUR"
+        - "GBP"
+
+  # Hotels BPP
+  - id: "hotels-bpp.beckn.org"
+    name: "Hotels Provider"
+    type: "BPP"
+    domain: "hospitality"
+    category: "accommodation"
+    subcategory: "hotels"
+    
+    network:
+      host: "localhost"
+      port: 7003
+      base_url: "http://localhost:7003"
+      public_url: "https://hotels.beckn.org"
+    
+    capabilities:
+      - "search"
+      - "select"
+      - "init"
+      - "confirm"
+      - "status"
+      - "cancel"
+      - "update"
+    
+    coverage:
+      geographic:
+        - "IN"
+      cities:
+        - "Mumbai"
+        - "Delhi"
+        - "Bangalore"
+        - "Chennai"
+        - "Hyderabad"
+        - "Pune"
+        - "Goa"
+        - "Jaipur"
+    
+    metadata:
+      hotel_chains:
+        - "Taj Hotels"
+        - "ITC Hotels"
+        - "Oberoi Hotels"
+        - "Hyatt"
+        - "Marriott"
+        - "OYO"
+        - "Treebo"
+      
+      room_types:
+        - "Standard"
+        - "Deluxe"
+        - "Premium"
+        - "Suite"
+        - "Executive"
+
+  # Buses BPP
+  - id: "buses-bpp.beckn.org"
+    name: "Bus Services Provider"
+    type: "BPP"
+    domain: "mobility"
+    category: "public_transport"
+    subcategory: "buses"
+    
+    network:
+      host: "localhost"
+      port: 7002
+      base_url: "http://localhost:7002"
+      public_url: "https://buses.beckn.org"
+    
+    capabilities:
+      - "search"
+      - "select"
+      - "init"
+      - "confirm"
+      - "status"
+      - "track"
+    
+    coverage:
+      geographic:
+        - "IN"
+      routes:
+        - "BLR-MYS" # Bangalore-Mysore
+        - "BOM-PNQ" # Mumbai-Pune
+        - "DEL-AGR" # Delhi-Agra
+        - "HYD-VJA" # Hyderabad-Vijayawada
+    
+    metadata:
+      operators:
+        - "KSRTC"
+        - "MSRTC"
+        - "RedBus"
+        - "Travels Corporation"
+      
+      bus_types:
+        - "AC Sleeper"
+        - "Non-AC Sleeper"
+        - "AC Seater"
+        - "Volvo"
+
+  # Trains BPP
+  - id: "trains-bpp.beckn.org"
+    name: "Railway Services Provider"
+    type: "BPP"
+    domain: "mobility"
+    category: "public_transport"
+    subcategory: "trains"
+    
+    network:
+      host: "localhost"
+      port: 7004
+      base_url: "http://localhost:7004"
+      public_url: "https://trains.beckn.org"
+    
+    capabilities:
+      - "search"
+      - "select"
+      - "init"
+      - "confirm"
+      - "status"
+      - "track"
+    
+    coverage:
+      geographic:
+        - "IN"
+      stations:
+        - "SBC" # Bangalore City
+        - "CSMT" # Mumbai CST
+        - "NDLS" # New Delhi
+        - "HYB" # Hyderabad
+        - "MAS" # Chennai Central
+    
+    metadata:
+      train_types:
+        - "Rajdhani Express"
+        - "Shatabdi Express"
+        - "Duronto Express"
+        - "Mail/Express"
+        - "Passenger"
+      
+      classes:
+        - "1A" # First AC
+        - "2A" # Second AC
+        - "3A" # Third AC
+        - "SL" # Sleeper
+        - "CC" # Chair Car
+
+  # Experiences BPP
+  - id: "experiences-bpp.beckn.org"
+    name: "Tourism Experiences Provider"
+    type: "BPP"
+    domain: "tourism"
+    category: "experiences"
+    subcategory: "activities"
+    
+    network:
+      host: "localhost"
+      port: 7006
+      base_url: "http://localhost:7006"
+      public_url: "https://experiences.beckn.org"
+    
+    capabilities:
+      - "search"
+      - "select"
+      - "init"
+      - "confirm"
+      - "status"
+    
+    coverage:
+      geographic:
+        - "IN"
+      destinations:
+        - "Goa"
+        - "Kerala"
+        - "Rajasthan"
+        - "Himachal Pradesh"
+        - "Karnataka"
+    
+    metadata:
+      activity_types:
+        - "Sightseeing"
+        - "Adventure Sports"
+        - "Cultural Tours"
+        - "Food Tours"
+        - "Wildlife Safari"
+      
+      duration_types:
+        - "Half Day"
+        - "Full Day"
+        - "Multi Day"
+
+# Network Routing Configuration
+routing:
+  # Request routing rules
+  rules:
+    - domain: "mobility"
+      category: "flights"
+      subcategory: "domestic"
+      route_to: ["flights-domestic-bpp.beckn.org"]
+    
+    - domain: "mobility"
+      category: "flights"
+      subcategory: "international"
+      route_to: ["flights-international-bpp.beckn.org"]
+    
+    - domain: "hospitality"
+      category: "accommodation"
+      route_to: ["hotels-bpp.beckn.org"]
+    
+    - domain: "mobility"
+      category: "public_transport"
+      subcategory: "buses"
+      route_to: ["buses-bpp.beckn.org"]
+    
+    - domain: "mobility"
+      category: "public_transport"
+      subcategory: "trains"
+      route_to: ["trains-bpp.beckn.org"]
+    
+    - domain: "tourism"
+      category: "experiences"
+      route_to: ["experiences-bpp.beckn.org"]
+  
+  # Fallback routing
+  fallback:
+    enabled: true
+    default_timeout: 30
+    retry_attempts: 2
+
+# Message Queue Configuration
+messaging:
+  # Message broker settings
+  broker:
+    type: "redis" # redis, rabbitmq, kafka
+    host: "localhost"
+    port: 6379
+    database: 0
+    
+  # Queue configuration
+  queues:
+    search_requests:
+      name: "beckn:search"
+      max_size: 10000
+      ttl: 300
+    
+    booking_requests:
+      name: "beckn:booking"
+      max_size: 5000
+      ttl: 600
+    
+    notifications:
+      name: "beckn:notifications"
+      max_size: 20000
+      ttl: 86400
+
+# Monitoring and Observability
+monitoring:
+  # Metrics collection
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    format: "prometheus"
+    
+  # Logging configuration
+  logging:
+    level: "info" # debug, info, warn, error
+    format: "json"
+    output: "stdout"
+    
+    # Log rotation
+    rotation:
+      enabled: true
+      max_size: "100MB"
+      max_files: 10
+  
+  # Health checks
+  health_checks:
+    enabled: true
+    endpoint: "/health"
+    interval: 30
+    
+    checks:
+      - name: "database"
+        type: "postgresql"
+        connection_string: "${DB_CONNECTION_STRING}"
+      
+      - name: "redis"
+        type: "redis"
+        host: "localhost"
+        port: 6379
+      
+      - name: "bpp_connectivity"
+        type: "http"
+        endpoints:
+          - "http://localhost:7001/health"
+          - "http://localhost:7003/health"
+          - "http://localhost:7005/health"
+
+# Cache Configuration
+cache:
+  # Redis cache settings
+  redis:
+    enabled: true
+    host: "localhost"
+    port: 6379
+    database: 1
+    ttl: 300 # default TTL in seconds
+  
+  # Cache policies
+  policies:
+    search_results:
+      ttl: 60 # 1 minute
+      max_size: 1000
+    
+    bpp_responses:
+      ttl: 30 # 30 seconds
+      max_size: 500
+    
+    user_sessions:
+      ttl: 3600 # 1 hour
+      max_size: 10000
+
+# Security Policies
+security:
+  # Network security
+  network:
+    # IP whitelisting
+    ip_whitelist:
+      enabled: false
+      allowed_ips: []
+    
+    # DDoS protection
+    ddos_protection:
+      enabled: true
+      max_requests_per_ip: 100
+      time_window: 60 # seconds
+  
+  # Data encryption
+  encryption:
+    # Encryption at rest
+    at_rest:
+      enabled: true
+      algorithm: "AES-256-GCM"
+      key_rotation_days: 90
+    
+    # Encryption in transit
+    in_transit:
+      enabled: true
+      tls_version: "1.3"
+      cipher_suites:
+        - "TLS_AES_256_GCM_SHA384"
+        - "TLS_CHACHA20_POLY1305_SHA256"
+  
+  # Certificate management
+  certificates:
+    auto_renewal: true
+    ca_bundle_path: "/etc/beckn/certs/ca-bundle.pem"
+    
+    # Certificate validation
+    validation:
+      enabled: true
+      check_revocation: true
+      max_chain_length: 5
+
+# Environment Configuration
+environment:
+  name: "development" # development, staging, production
+  
+  # Environment-specific settings
+  development:
+    debug: true
+    mock_responses: false
+    detailed_logging: true
+  
+  staging:
+    debug: false
+    mock_responses: false
+    detailed_logging: true
+  
+  production:
+    debug: false
+    mock_responses: false
+    detailed_logging: false
+    performance_monitoring: true
+
+# Compliance and Standards
+compliance:
+  # Beckn protocol compliance
+  beckn:
+    version: "1.1.0"
+    strict_mode: true
+    validate_schemas: true
+  
+  # Data protection compliance
+  data_protection:
+    gdpr_compliance: true
+    data_retention_days: 2555 # 7 years
+    anonymization: true
+  
+  # Audit logging
+  audit:
+    enabled: true
+    log_all_requests: true
+    log_sensitive_data: false
+    retention_days: 2555

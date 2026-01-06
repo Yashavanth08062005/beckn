@@ -1,0 +1,88 @@
+# Prometheus configuration for Beckn Layer 2 monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Beckn Gateway
+  - job_name: 'beckn-gateway'
+    static_configs:
+      - targets: ['beckn-gateway:80']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # BAP Service
+  - job_name: 'bap-travel-discovery'
+    static_configs:
+      - targets: ['bap-travel-discovery:8081']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Registry Service
+  - job_name: 'beckn-registry'
+    static_configs:
+      - targets: ['beckn-registry:8090']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Message Broker
+  - job_name: 'beckn-message-broker'
+    static_configs:
+      - targets: ['beckn-message-broker:8091']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Monitor Service
+  - job_name: 'beckn-monitor'
+    static_configs:
+      - targets: ['beckn-monitor:8092']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # BPP Services
+  - job_name: 'bpp-flights'
+    static_configs:
+      - targets: ['bpp-flights:7001']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'bpp-hotels'
+    static_configs:
+      - targets: ['bpp-hotels:7003']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'bpp-international-flights'
+    static_configs:
+      - targets: ['travel-discovery-bpp-international-flights:7005']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # PostgreSQL
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 30s
+
+# Alerting rules (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
