@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CreditCard, Lock, Loader, AlertCircle, Smartphone, Wallet } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 
 const PaymentPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user } = useAuth();
     const { bookingData, item, type, searchOrigin, searchDestination } = location.state || {};
 
     const [processing, setProcessing] = useState(false);
