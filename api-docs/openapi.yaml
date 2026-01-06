@@ -1,0 +1,1429 @@
+openapi: 3.0.3
+info:
+  title: Beckn Travel Discovery Platform API
+  description: |
+    Complete Beckn Protocol implementation for multi-modal travel booking platform.
+    
+    This API enables discovery and booking of flights, hotels, buses, trains, and experiences
+    through a unified Beckn-compliant interface.
+    
+    ## Architecture
+    - **BAP (Beckn Application Platform)**: Aggregates requests across multiple BPPs
+    - **BPP (Beckn Provider Platform)**: Individual service providers
+    - **Multi-modal Support**: Flights, Hotels, Buses, Trains, Experiences
+    
+    ## Authentication
+    JWT-based authentication required for booking operations.
+    
+    ## Beckn Protocol Flow
+    1. **SEARCH** - Discover available services
+    2. **SELECT** - Select specific items with pricing
+    3. **INIT** - Initialize booking with customer details
+    4. **CONFIRM** - Confirm booking and payment
+    5. **STATUS** - Track booking status
+    6. **CANCEL** - Cancel booking with refunds
+  version: 1.0.0
+  contact:
+    name: Beckn Travel Discovery Team
+    email: support@beckn-travel.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8081
+    description: Development BAP Server
+  - url: http://localhost:7001
+    description: Flights BPP Server
+  - url: http://localhost:7003
+    description: Hotels BPP Server
+
+tags:
+  - name: Beckn Protocol
+    description: Core Beckn protocol endpoints
+  - name: Authentication
+    description: User authentication and management
+  - name: Booking Management
+    description: Booking lifecycle operations
+
+paths:
+  # ============================================
+  # BECKN PROTOCOL ENDPOINTS
+  # ============================================
+  
+  /beckn/search:
+    post:
+      tags:
+        - Beckn Protocol
+      summary: Search for travel services
+      description: |
+        Discover available travel services across multiple providers.
+        Supports flights, hotels, buses, trains, and experiences.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+            examples:
+              flight_search:
+                summary: Flight Search (BLR to BOM)
+                value:
+                  context:
+                    domain: "mobility"
+                    action: "search"
+                    core_version: "1.1.0"
+                    bap_id: "travel-discovery-bap.example.com"
+                    bap_uri: "http://localhost:8081"
+                    transaction_id: "txn-flight-001"
+                    message_id: "msg-search-001"
+                    timestamp: "2024-01-15T10:00:00.000Z"
+                  message:
+                    intent:
+                      category:
+                        id: "MOBILITY"
+                      fulfillment:
+                        start:
+                          location:
+                            gps: "12.9716,77.5946"
+                            address:
+                              city:
+                                name: "Bangalore"
+                        end:
+                          location:
+                            gps: "19.0896,72.8656"
+                            address:
+                              city:
+                                name: "Mumbai"
+                        time:
+                          range:
+                            start: "2024-01-15T00:00:00.000Z"
+                            end: "2024-01-15T23:59:59.000Z"
+              hotel_search:
+                summary: Hotel Search in Mumbai
+                value:
+                  context:
+                    domain: "hospitality"
+                    action: "search"
+                    core_version: "1.1.0"
+                    bap_id: "travel-discovery-bap.example.com"
+                    bap_uri: "http://localhost:8081"
+                    transaction_id: "txn-hotel-001"
+                    message_id: "msg-search-002"
+                    timestamp: "2024-01-15T10:00:00.000Z"
+                  message:
+                    intent:
+                      category:
+                        id: "HOSPITALITY"
+                      fulfillment:
+                        start:
+                          location:
+                            address:
+                              city:
+                                name: "Mumbai"
+                        time:
+                          range:
+                            start: "2024-01-20T14:00:00.000Z"
+                            end: "2024-01-22T11:00:00.000Z"
+              experience_search:
+                summary: Experience Search in Goa
+                value:
+                  context:
+                    domain: "tourism"
+                    action: "search"
+                    core_version: "1.1.0"
+                    bap_id: "travel-discovery-bap.example.com"
+                    bap_uri: "http://localhost:8081"
+                    transaction_id: "txn-exp-001"
+                    message_id: "msg-search-003"
+                    timestamp: "2024-01-15T10:00:00.000Z"
+                  message:
+                    intent:
+                      category:
+                        id: "EXPERIENCE"
+                      fulfillment:
+                        start:
+                          location:
+                            address:
+                              city:
+                                name: "Goa"
+                        time:
+                          range:
+                            start: "2024-01-25T09:00:00.000Z"
+                            end: "2024-01-25T18:00:00.000Z"
+      responses:
+        '200':
+          description: Search results from multiple providers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+              examples:
+                flight_results:
+                  summary: Flight Search Results
+                  value:
+                    context:
+                      domain: "mobility"
+                      action: "on_search"
+                      core_version: "1.1.0"
+                      bap_id: "travel-discovery-bap.example.com"
+                      bap_uri: "http://localhost:8081"
+                      transaction_id: "txn-flight-001"
+                      message_id: "msg-search-001"
+                      timestamp: "2024-01-15T10:00:30.000Z"
+                    message:
+                      catalog:
+                        descriptor:
+                          name: "Travel Services Catalog"
+                        providers:
+                          - id: "flights-provider-001"
+                            descriptor:
+                              name: "Domestic Flights Provider"
+                            items:
+                              - id: "flight-1"
+                                descriptor:
+                                  name: "AI-1234 Air India"
+                                  code: "AI-1234"
+                                  short_desc: "Non-stop flight"
+                                  long_desc: "Comfortable economy class with meals included"
+                                price:
+                                  currency: "INR"
+                                  value: "5500"
+                                tags:
+                                  - code: "ROUTE"
+                                    list:
+                                      - code: "ORIGIN"
+                                        value: "BLR"
+                                      - code: "DESTINATION"
+                                        value: "BOM"
+                                  - code: "SCHEDULE"
+                                    list:
+                                      - code: "DEPARTURE"
+                                        value: "10:00:00"
+                                      - code: "ARRIVAL"
+                                        value: "12:00:00"
+                                  - code: "AMENITIES"
+                                    list:
+                                      - code: "MEALS"
+                                        value: "true"
+                                      - code: "WIFI"
+                                        value: "true"
+                                      - code: "BAGGAGE"
+                                        value: "20kg"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /beckn/select:
+    post:
+      tags:
+        - Beckn Protocol
+      summary: Select specific items
+      description: Select specific travel items and get detailed pricing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectRequest'
+            examples:
+              flight_select:
+                summary: Select Flight with 2 Passengers
+                value:
+                  context:
+                    domain: "mobility"
+                    action: "select"
+                    core_version: "1.1.0"
+                    bap_id: "travel-discovery-bap.example.com"
+                    bap_uri: "http://localhost:8081"
+                    transaction_id: "txn-flight-001"
+                    message_id: "msg-select-001"
+                    timestamp: "2024-01-15T10:05:00.000Z"
+                  message:
+                    order:
+                      items:
+                        - id: "flight-1"
+                          quantity:
+                            count: 2
+      responses:
+        '200':
+          description: Selected items with detailed pricing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelectResponse'
+              examples:
+                flight_select_response:
+                  summary: Flight Selection Response
+                  value:
+                    context:
+                      domain: "mobility"
+                      action: "on_select"
+                      core_version: "1.1.0"
+                      bap_id: "travel-discovery-bap.example.com"
+                      bap_uri: "http://localhost:8081"
+                      transaction_id: "txn-flight-001"
+                      message_id: "msg-select-001"
+                      timestamp: "2024-01-15T10:05:30.000Z"
+                    message:
+                      order:
+                        state: "SELECTED"
+                        items:
+                          - id: "flight-1"
+                            descriptor:
+                              name: "AI-1234 Air India"
+                            quantity:
+                              count: 2
+                        quote:
+                          price:
+                            currency: "INR"
+                            value: "11000.00"
+                          breakup:
+                            - title: "Base Fare (2 passengers)"
+                              price:
+                                currency: "INR"
+                                value: "8400.00"
+                            - title: "Taxes & Fees"
+                              price:
+                                currency: "INR"
+                                value: "2600.00"
+
+  /beckn/init:
+    post:
+      tags:
+        - Beckn Protocol
+      summary: Initialize booking
+      description: Initialize booking with customer details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitRequest'
+            examples:
+              flight_init:
+                summary: Initialize Flight Booking
+                value:
+                  context:
+                    domain: "mobility"
+                    action: "init"
+                    core_version: "1.1.0"
+                    bap_id: "travel-discovery-bap.example.com"
+                    bap_uri: "http://localhost:8081"
+                    transaction_id: "txn-flight-001"
+                    message_id: "msg-init-001"
+                    timestamp: "2024-01-15T10:10:00.000Z"
+                  message:
+                    order:
+                      items:
+                        - id: "flight-1"
+                          quantity:
+                            count: 2
+                      billing:
+                        name: "John Doe"
+                        email: "john@example.com"
+                        phone: "+91-9876543210"
+                        address:
+                          door: "123"
+                          building: "ABC Apartments"
+                          street: "MG Road"
+                          locality: "Koramangala"
+                          city: "Bangalore"
+                          state: "Karnataka"
+                          country: "India"
+                          area_code: "560034"
+                      fulfillment:
+                        customer:
+                          person:
+                            name: "John Doe"
+                        contact:
+                          phone: "+91-9876543210"
+                          email: "john@example.com"
+      responses:
+        '200':
+          description: Booking initialized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitResponse'
+
+  /beckn/confirm:
+    post:
+      tags:
+        - Beckn Protocol
+      summary: Confirm booking
+      description: Confirm booking with payment details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequest'
+            examples:
+              flight_confirm:
+                summary: Confirm Flight Booking
+                value:
+                  context:
+                    domain: "mobility"
+                    action: "confirm"
+                    core_version: "1.1.0"
+                    bap_id: "travel-discovery-bap.example.com"
+                    bap_uri: "http://localhost:8081"
+                    transaction_id: "txn-flight-001"
+                    message_id: "msg-confirm-001"
+                    timestamp: "2024-01-15T10:15:00.000Z"
+                  message:
+                    order:
+                      id: "order-abc123"
+                      items:
+                        - id: "flight-1"
+                          quantity:
+                            count: 2
+                      billing:
+                        name: "John Doe"
+                        email: "john@example.com"
+                        phone: "+91-9876543210"
+                      payment:
+                        type: "PRE-FULFILLMENT"
+                        status: "PAID"
+                        params:
+                          amount: "11000.00"
+                          currency: "INR"
+                          transaction_id: "pay-xyz789"
+      responses:
+        '200':
+          description: Booking confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmResponse'
+              examples:
+                flight_confirm_response:
+                  summary: Flight Booking Confirmation
+                  value:
+                    context:
+                      domain: "mobility"
+                      action: "on_confirm"
+                      core_version: "1.1.0"
+                      bap_id: "travel-discovery-bap.example.com"
+                      bap_uri: "http://localhost:8081"
+                      transaction_id: "txn-flight-001"
+                      message_id: "msg-confirm-001"
+                      timestamp: "2024-01-15T10:15:30.000Z"
+                    message:
+                      order:
+                        id: "order-abc123"
+                        state: "CONFIRMED"
+                        bpp_booking_id: "FLT-1704614400-A1B2C3"
+                        items:
+                          - id: "flight-1"
+                            descriptor:
+                              name: "AI-1234 Air India"
+                            quantity:
+                              count: 2
+                        billing:
+                          name: "John Doe"
+                          email: "john@example.com"
+                          phone: "+91-9876543210"
+                        payment:
+                          type: "PRE-FULFILLMENT"
+                          status: "PAID"
+                          params:
+                            amount: "11000.00"
+                            currency: "INR"
+                        fulfillment:
+                          state:
+                            descriptor:
+                              code: "CONFIRMED"
+                          tracking: true
+                          id: "FLT-1704614400-A1B2C3"
+                        created_at: "2024-01-15T10:15:30.000Z"
+                        updated_at: "2024-01-15T10:15:30.000Z"
+
+  /beckn/status:
+    post:
+      tags:
+        - Beckn Protocol
+      summary: Get booking status
+      description: Get current status of a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusRequest'
+            examples:
+              flight_status:
+                summary: Check Flight Booking Status
+                value:
+                  context:
+                    domain: "mobility"
+                    action: "status"
+                    core_version: "1.1.0"
+                    bap_id: "travel-discovery-bap.example.com"
+                    bap_uri: "http://localhost:8081"
+                    transaction_id: "txn-flight-001"
+                    message_id: "msg-status-001"
+                    timestamp: "2024-01-15T12:00:00.000Z"
+                  message:
+                    order_id: "order-abc123"
+      responses:
+        '200':
+          description: Current booking status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+  /beckn/cancel:
+    post:
+      tags:
+        - Beckn Protocol
+      summary: Cancel booking
+      description: Cancel a confirmed booking with refund calculation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelRequest'
+            examples:
+              flight_cancel:
+                summary: Cancel Flight Booking
+                value:
+                  context:
+                    domain: "mobility"
+                    action: "cancel"
+                    core_version: "1.1.0"
+                    bap_id: "travel-discovery-bap.example.com"
+                    bap_uri: "http://localhost:8081"
+                    transaction_id: "txn-flight-001"
+                    message_id: "msg-cancel-001"
+                    timestamp: "2024-01-15T14:00:00.000Z"
+                  message:
+                    order_id: "order-abc123"
+                    cancellation_reason_id: "CUSTOMER_REQUEST"
+                    descriptor:
+                      name: "Booking Cancellation"
+                      short_desc: "Customer requested cancellation"
+      responses:
+        '200':
+          description: Booking cancelled with refund details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+              examples:
+                flight_cancel_response:
+                  summary: Flight Cancellation Response
+                  value:
+                    context:
+                      domain: "mobility"
+                      action: "on_cancel"
+                      core_version: "1.1.0"
+                      bap_id: "travel-discovery-bap.example.com"
+                      bap_uri: "http://localhost:8081"
+                      transaction_id: "txn-flight-001"
+                      message_id: "msg-cancel-001"
+                      timestamp: "2024-01-15T14:00:30.000Z"
+                    message:
+                      order:
+                        id: "order-abc123"
+                        state: "CANCELLED"
+                        cancellation:
+                          cancelled_by: "CUSTOMER"
+                          reason:
+                            id: "CUSTOMER_REQUEST"
+                            descriptor:
+                              name: "Customer requested cancellation"
+                          time:
+                            timestamp: "2024-01-15T14:00:30.000Z"
+                        payment:
+                          type: "REFUND"
+                          status: "PROCESSING"
+                          params:
+                            amount: "9900.00"
+                            currency: "INR"
+                            refund_id: "refund_1704628830123"
+                            original_amount: "11000.00"
+                            cancellation_charges: "1100.00"
+                          time:
+                            timestamp: "2024-01-15T14:00:30.000Z"
+
+  # ============================================
+  # AUTHENTICATION ENDPOINTS
+  # ============================================
+  
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              user_registration:
+                summary: User Registration
+                value:
+                  fullName: "John Doe"
+                  email: "john@example.com"
+                  password: "securePassword123"
+                  phone: "+91-9876543210"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and get JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              user_login:
+                summary: User Login
+                value:
+                  email: "john@example.com"
+                  password: "securePassword123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # BOOKING MANAGEMENT ENDPOINTS
+  # ============================================
+  
+  /api/bookings:
+    get:
+      tags:
+        - Booking Management
+      summary: Get user bookings
+      description: Retrieve all bookings for authenticated user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by booking status
+          schema:
+            type: string
+            enum: [CONFIRMED, CANCELLED, PENDING]
+        - name: limit
+          in: query
+          description: Number of bookings to return
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          description: Number of bookings to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of user bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/bookings/{bookingId}:
+    get:
+      tags:
+        - Booking Management
+      summary: Get booking details
+      description: Get detailed information about a specific booking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          description: Booking ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingDetails'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # HEALTH CHECK ENDPOINTS
+  # ============================================
+  
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Check if the service is running
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  service:
+                    type: string
+                    example: "Beckn Travel Discovery BAP"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+# ============================================
+# COMPONENTS
+# ============================================
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Beckn Context Schema
+    BecknContext:
+      type: object
+      required:
+        - domain
+        - action
+        - core_version
+        - bap_id
+        - bap_uri
+        - transaction_id
+        - message_id
+        - timestamp
+      properties:
+        domain:
+          type: string
+          enum: [mobility, hospitality, tourism]
+          description: Domain of the service
+        action:
+          type: string
+          enum: [search, select, init, confirm, status, cancel, update, support, rating]
+          description: Beckn action being performed
+        core_version:
+          type: string
+          example: "1.1.0"
+          description: Beckn core version
+        bap_id:
+          type: string
+          example: "travel-discovery-bap.example.com"
+          description: BAP identifier
+        bap_uri:
+          type: string
+          example: "http://localhost:8081"
+          description: BAP URI
+        bpp_id:
+          type: string
+          example: "flights-bpp.example.com"
+          description: BPP identifier (in responses)
+        bpp_uri:
+          type: string
+          example: "http://localhost:7001"
+          description: BPP URI (in responses)
+        transaction_id:
+          type: string
+          example: "txn-flight-001"
+          description: Unique transaction identifier
+        message_id:
+          type: string
+          example: "msg-search-001"
+          description: Unique message identifier
+        timestamp:
+          type: string
+          format: date-time
+          description: Message timestamp
+
+    # Search Schemas
+    SearchRequest:
+      type: object
+      required:
+        - context
+        - message
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            intent:
+              type: object
+              properties:
+                category:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      enum: [MOBILITY, HOSPITALITY, EXPERIENCE]
+                fulfillment:
+                  type: object
+                  properties:
+                    start:
+                      type: object
+                      properties:
+                        location:
+                          type: object
+                          properties:
+                            gps:
+                              type: string
+                              example: "12.9716,77.5946"
+                            address:
+                              type: object
+                              properties:
+                                city:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                      example: "Bangalore"
+                    end:
+                      type: object
+                      properties:
+                        location:
+                          type: object
+                          properties:
+                            gps:
+                              type: string
+                              example: "19.0896,72.8656"
+                    time:
+                      type: object
+                      properties:
+                        range:
+                          type: object
+                          properties:
+                            start:
+                              type: string
+                              format: date-time
+                            end:
+                              type: string
+                              format: date-time
+
+    SearchResponse:
+      type: object
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            catalog:
+              type: object
+              properties:
+                descriptor:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                providers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      descriptor:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            descriptor:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                code:
+                                  type: string
+                                short_desc:
+                                  type: string
+                                long_desc:
+                                  type: string
+                            price:
+                              type: object
+                              properties:
+                                currency:
+                                  type: string
+                                  example: "INR"
+                                value:
+                                  type: string
+                                  example: "5500"
+                            tags:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  code:
+                                    type: string
+                                  list:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        code:
+                                          type: string
+                                        value:
+                                          type: string
+
+    # Select Schemas
+    SelectRequest:
+      type: object
+      required:
+        - context
+        - message
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      quantity:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+
+    SelectResponse:
+      type: object
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                state:
+                  type: string
+                  example: "SELECTED"
+                items:
+                  type: array
+                  items:
+                    type: object
+                quote:
+                  type: object
+                  properties:
+                    price:
+                      type: object
+                      properties:
+                        currency:
+                          type: string
+                        value:
+                          type: string
+                    breakup:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                          price:
+                            type: object
+                            properties:
+                              currency:
+                                type: string
+                              value:
+                                type: string
+
+    # Init Schemas
+    InitRequest:
+      type: object
+      required:
+        - context
+        - message
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                billing:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                    phone:
+                      type: string
+                    address:
+                      type: object
+                      properties:
+                        door:
+                          type: string
+                        building:
+                          type: string
+                        street:
+                          type: string
+                        locality:
+                          type: string
+                        city:
+                          type: string
+                        state:
+                          type: string
+                        country:
+                          type: string
+                        area_code:
+                          type: string
+
+    InitResponse:
+      type: object
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                state:
+                  type: string
+                  example: "INITIALIZED"
+                id:
+                  type: string
+                payment:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      example: "PRE-FULFILLMENT"
+                    collected_by:
+                      type: string
+                      example: "BPP"
+
+    # Confirm Schemas
+    ConfirmRequest:
+      type: object
+      required:
+        - context
+        - message
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                id:
+                  type: string
+                items:
+                  type: array
+                  items:
+                    type: object
+                billing:
+                  type: object
+                payment:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                      example: "PAID"
+                    params:
+                      type: object
+                      properties:
+                        amount:
+                          type: string
+                        currency:
+                          type: string
+                        transaction_id:
+                          type: string
+
+    ConfirmResponse:
+      type: object
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                id:
+                  type: string
+                state:
+                  type: string
+                  example: "CONFIRMED"
+                bpp_booking_id:
+                  type: string
+                items:
+                  type: array
+                  items:
+                    type: object
+                billing:
+                  type: object
+                payment:
+                  type: object
+                fulfillment:
+                  type: object
+                  properties:
+                    state:
+                      type: object
+                      properties:
+                        descriptor:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                              example: "CONFIRMED"
+                    tracking:
+                      type: boolean
+                    id:
+                      type: string
+                created_at:
+                  type: string
+                  format: date-time
+                updated_at:
+                  type: string
+                  format: date-time
+
+    # Status Schemas
+    StatusRequest:
+      type: object
+      required:
+        - context
+        - message
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order_id:
+              type: string
+
+    StatusResponse:
+      type: object
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                id:
+                  type: string
+                state:
+                  type: string
+                fulfillment:
+                  type: object
+
+    # Cancel Schemas
+    CancelRequest:
+      type: object
+      required:
+        - context
+        - message
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order_id:
+              type: string
+            cancellation_reason_id:
+              type: string
+              enum: [CUSTOMER_REQUEST, CHANGE_OF_PLANS, EMERGENCY, DUPLICATE_BOOKING]
+            descriptor:
+              type: object
+              properties:
+                name:
+                  type: string
+                short_desc:
+                  type: string
+
+    CancelResponse:
+      type: object
+      properties:
+        context:
+          $ref: '#/components/schemas/BecknContext'
+        message:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                id:
+                  type: string
+                state:
+                  type: string
+                  example: "CANCELLED"
+                cancellation:
+                  type: object
+                  properties:
+                    cancelled_by:
+                      type: string
+                    reason:
+                      type: object
+                    time:
+                      type: object
+                payment:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      example: "REFUND"
+                    status:
+                      type: string
+                      example: "PROCESSING"
+                    params:
+                      type: object
+                      properties:
+                        amount:
+                          type: string
+                        currency:
+                          type: string
+                        refund_id:
+                          type: string
+                        original_amount:
+                          type: string
+                        cancellation_charges:
+                          type: string
+
+    # Authentication Schemas
+    RegisterRequest:
+      type: object
+      required:
+        - fullName
+        - email
+        - password
+      properties:
+        fullName:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          minLength: 8
+          example: "securePassword123"
+        phone:
+          type: string
+          example: "+91-9876543210"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          example: "securePassword123"
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Login successful"
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            fullName:
+              type: string
+            email:
+              type: string
+            phone:
+              type: string
+
+    # Booking Management Schemas
+    BookingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingDetails'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    BookingDetails:
+      type: object
+      properties:
+        id:
+          type: string
+        booking_reference:
+          type: string
+        booking_type:
+          type: string
+          enum: [flight, hotel, bus, train, experience]
+        status:
+          type: string
+          enum: [CONFIRMED, CANCELLED, PENDING]
+        total_price:
+          type: number
+        currency:
+          type: string
+        passenger_details:
+          type: object
+        item_details:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # Error Schemas
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            type:
+              type: string
+              example: "CORE-ERROR"
+            code:
+              type: string
+              example: "20001"
+            message:
+              type: string
+              example: "Invalid request format"
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              type: "CORE-ERROR"
+              code: "20001"
+              message: "Invalid request format. Missing context or message."
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              type: "AUTH-ERROR"
+              code: "40001"
+              message: "Authentication required. Please provide valid JWT token."
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              type: "CORE-ERROR"
+              code: "20000"
+              message: "Internal server error"
