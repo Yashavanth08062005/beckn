@@ -80,6 +80,47 @@ SELECT 'KAD-MG-001', 'Kadamba Transport', 'Volvo AC', 'BOM', 'GOI',
      '{"ac": true, "pushback_seats": true}'::jsonb, 'ACTIVE'
 WHERE NOT EXISTS (SELECT 1 FROM buses WHERE bus_id = 'KAD-MG-001');
 
+-- Delhi to Mumbai bus routes
+INSERT INTO buses (bus_id, operator_name, bus_type, departure_city, arrival_city, 
+    departure_location, arrival_location, departure_time, arrival_time, duration_minutes, 
+    price, currency, seats_available, amenities, status)
+SELECT 'RSRTC-DM-001', 'RSRTC', 'Volvo Multi-Axle', 'DEL', 'BOM',
+     'Kashmere Gate ISBT', 'Mumbai Central',
+     NOW() + INTERVAL '1 day 20 hours', NOW() + INTERVAL '3 days 8 hours', 1800,
+     2800.00, 'INR', 42,
+     '{"wifi": true, "charging_point": true, "reading_light": true, "blanket": true, "water_bottle": true}'::jsonb, 'ACTIVE'
+WHERE NOT EXISTS (SELECT 1 FROM buses WHERE bus_id = 'RSRTC-DM-001');
+
+INSERT INTO buses (bus_id, operator_name, bus_type, departure_city, arrival_city, 
+    departure_location, arrival_location, departure_time, arrival_time, duration_minutes, 
+    price, currency, seats_available, amenities, status)
+SELECT 'UPSRTC-DM-002', 'UPSRTC', 'AC Sleeper Luxury', 'DEL', 'BOM',
+     'Anand Vihar ISBT', 'Borivali Bus Station',
+     NOW() + INTERVAL '1 day 22 hours', NOW() + INTERVAL '3 days 12 hours', 1920,
+     3200.00, 'INR', 36,
+     '{"wifi": true, "charging_point": true, "tv": true, "gps_tracking": true, "cctv": true}'::jsonb, 'ACTIVE'
+WHERE NOT EXISTS (SELECT 1 FROM buses WHERE bus_id = 'UPSRTC-DM-002');
+
+INSERT INTO buses (bus_id, operator_name, bus_type, departure_city, arrival_city, 
+    departure_location, arrival_location, departure_time, arrival_time, duration_minutes, 
+    price, currency, seats_available, amenities, status)
+SELECT 'REDBUS-DM-003', 'RedBus Premium', 'Scania AC Sleeper', 'DEL', 'BOM',
+     'Majnu Ka Tilla', 'Sion Circle',
+     NOW() + INTERVAL '2 days 6 hours', NOW() + INTERVAL '3 days 18 hours', 1860,
+     2950.00, 'INR', 32,
+     '{"wifi": true, "charging_point": true, "reading_light": true, "pillow": true, "blanket": true}'::jsonb, 'ACTIVE'
+WHERE NOT EXISTS (SELECT 1 FROM buses WHERE bus_id = 'REDBUS-DM-003');
+
+INSERT INTO buses (bus_id, operator_name, bus_type, departure_city, arrival_city, 
+    departure_location, arrival_location, departure_time, arrival_time, duration_minutes, 
+    price, currency, seats_available, amenities, status)
+SELECT 'TRAVELS-DM-004', 'Sharma Travels', 'Volvo B11R', 'DEL', 'BOM',
+     'Sarai Kale Khan ISBT', 'Dadar TT',
+     NOW() + INTERVAL '1 day 18 hours', NOW() + INTERVAL '3 days 6 hours', 1740,
+     2600.00, 'INR', 45,
+     '{"ac": true, "pushback_seats": true, "charging_point": true, "water_bottle": true}'::jsonb, 'ACTIVE'
+WHERE NOT EXISTS (SELECT 1 FROM buses WHERE bus_id = 'TRAVELS-DM-004');
+
 -- Create Indexes
 CREATE INDEX IF NOT EXISTS idx_buses_route ON buses(departure_city, arrival_city);
 CREATE INDEX IF NOT EXISTS idx_buses_date ON buses(departure_time);

@@ -20,7 +20,7 @@ const ExperienceCard = ({ option }) => {
     const image = details.images && details.images.length > 0 ? details.images[0] : null;
 
     return (
-        <div className="card hover:border-purple-300 border-2 border-transparent transition-all overflow-hidden">
+        <div className="card hover:border-blue-300 border-2 border-transparent transition-all overflow-hidden">
             <div className="flex flex-col md:flex-row gap-4">
                 {/* Image Section */}
                 {image && (
@@ -58,7 +58,7 @@ const ExperienceCard = ({ option }) => {
                                 )}
                             </div>
                             <div className="text-right">
-                                <div className="flex items-center space-x-1 justify-end text-purple-600">
+                                <div className="flex items-center space-x-1 justify-end text-brand">
                                     <IndianRupee className="h-5 w-5" />
                                     <span className="text-2xl font-bold">{option.price}</span>
                                 </div>
@@ -73,7 +73,7 @@ const ExperienceCard = ({ option }) => {
                         {/* Quick Info */}
                         <div className="flex flex-wrap gap-3 text-sm text-gray-700 mb-3">
                             {details.duration && (
-                                <div className="flex items-center space-x-1 bg-purple-50 px-2 py-1 rounded text-purple-700">
+                                <div className="flex items-center space-x-1 bg-blue-50 px-2 py-1 rounded text-blue-700">
                                     <Clock className="h-4 w-4" />
                                     <span>{details.duration}</span>
                                 </div>
@@ -91,7 +91,7 @@ const ExperienceCard = ({ option }) => {
                     <div className="flex items-center justify-between mt-2 pt-3 border-t border-gray-100">
                         <button
                             onClick={() => setShowDetails(!showDetails)}
-                            className="flex items-center space-x-1 text-purple-600 hover:text-purple-800 text-sm font-medium"
+                            className="flex items-center space-x-1 text-brand hover:text-blue-800 text-sm font-medium"
                         >
                             {showDetails ? (
                                 <><span>Hide Details</span><ChevronUp className="h-4 w-4" /></>
@@ -101,7 +101,10 @@ const ExperienceCard = ({ option }) => {
                         </button>
                         <button
                             onClick={handleBookNow}
-                            className="bg-purple-600 text-white py-2 px-6 rounded-lg hover:bg-purple-700 font-semibold transition-colors text-sm shadow-md hover:shadow-lg"
+                            className="bg-brand text-white py-2 px-6 rounded-lg hover:bg-brand font-semibold transition-colors text-sm shadow-md hover:shadow-lg"
+                            style={{ backgroundColor: 'rgb(37 99 235)' }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = 'rgb(29 78 216)'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'rgb(37 99 235)'}
                         >
                             Book Experience
                         </button>
@@ -113,7 +116,7 @@ const ExperienceCard = ({ option }) => {
             {showDetails && (
                 <div className="mt-4 pt-4 border-t border-gray-200 bg-gray-50 rounded-lg p-4 animate-fadeIn">
                     <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <Info className="h-4 w-4 text-purple-500" />
+                        <Info className="h-4 w-4 text-brand" />
                         About this Activity
                     </h4>
                     <p className="text-sm text-gray-600 mb-4 whitespace-pre-line">

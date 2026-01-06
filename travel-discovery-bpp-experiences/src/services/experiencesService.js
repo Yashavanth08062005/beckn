@@ -1,180 +1,145 @@
 const { v4: uuidv4 } = require('uuid');
+const db = require('../config/database');
 
 /**
- * Experiences Service - Provides local experience catalog and booking services
+ * Experiences Service - Provides experience catalog and booking services
  */
 class ExperiencesService {
 
-    constructor() {
-        // Mock Data for Experiences
-        this.experiences = [
-            {
-                id: 'exp-001',
-                name: 'Mumbai Heritage Walk',
-                short_desc: 'Guided walking tour of South Mumbai',
-                long_desc: 'Explore the colonial architecture and heritage sites of South Mumbai with an expert guide.',
-                city: 'Mumbai',
-                price: '1500',
-                duration: '3 hours',
-                rating: 4.8,
-                image: 'https://cdn.pixabay.com/photo/2017/02/10/12/12/temple-2055132_1280.jpg', // Used a generic temple image as placeholder
-                location: 'Gateway of India',
-                type: 'Activity'
-            },
-            {
-                id: 'exp-002',
-                name: 'Elephanta Caves Tour',
-                short_desc: 'Ferry ride and caves exploration',
-                long_desc: 'Visit the UNESCO World Heritage site of Elephanta Caves featuring ancient rock-cut sculptures.',
-                city: 'Mumbai',
-                price: '2500',
-                duration: '5 hours',
-                rating: 4.6,
-                image: 'https://cdn.pixabay.com/photo/2014/09/11/09/49/elephanta-caves-441630_1280.jpg',
-                location: 'Gateway of India',
-                type: 'Tour'
-            },
-            {
-                id: 'exp-003',
-                name: 'Bollywood Studio Tour',
-                short_desc: 'Behind the scenes of Bollywood',
-                long_desc: 'Witness the magic of Indian cinema with a visit to a live shooting studio.',
-                city: 'Mumbai',
-                price: '3500',
-                duration: '4 hours',
-                rating: 4.5,
-                image: 'https://cdn.pixabay.com/photo/2013/03/02/02/41/alley-89197_1280.jpg', // Generic placeholder
-                location: 'Film City',
-                type: 'Activity'
-            },
-            {
-                id: 'exp-004',
-                name: 'Old Delhi Food Walk',
-                short_desc: 'Culinary journey through Chandni Chowk',
-                long_desc: 'Taste the best street food of Old Delhi including Parathas, Chaat, and Kebabs.',
-                city: 'Delhi',
-                price: '2000',
-                duration: '3 hours',
-                rating: 4.9,
-                image: 'https://cdn.pixabay.com/photo/2022/02/12/21/20/street-food-7010042_1280.jpg',
-                location: 'Chandni Chowk',
-                type: 'Food'
-            },
-            {
-                id: 'exp-005',
-                name: 'Cubbon Park Nature Walk',
-                short_desc: 'Morning walk in the lung of the city',
-                long_desc: 'Enjoy the lush greenery and colonial architecture within Bangalore\'s famous Cubbon Park.',
-                city: 'Bangalore',
-                price: '500',
-                duration: '2 hours',
-                rating: 4.7,
-                image: 'https://cdn.pixabay.com/photo/2016/11/14/03/46/bangalore-1822557_1280.jpg',
-                location: 'Cubbon Park',
-                type: 'Activity'
-            },
-            {
-                id: 'exp-006',
-                name: 'Bangalore Palace Tour',
-                short_desc: 'Royal history of the Wodeyars',
-                long_desc: 'Explore the majestic Bangalore Palace, inspired by Windsor Castle.',
-                city: 'Bangalore',
-                price: '1200',
-                duration: '3 hours',
-                rating: 4.6,
-                image: 'https://cdn.pixabay.com/photo/2018/01/14/16/09/bangalore-palace-3081979_1280.jpg',
-                location: 'Vasanth Nagar',
-                type: 'Tour'
-            },
-            {
-                id: 'exp-007',
-                name: 'Microbrewery Pub Crawl',
-                short_desc: 'Experience the pub capital of India',
-                long_desc: 'Visit the best microbreweries in Indiranagar and taste local craft beers.',
-                city: 'Bangalore',
-                price: '2500',
-                duration: '4 hours',
-                rating: 4.8,
-                image: 'https://cdn.pixabay.com/photo/2016/11/21/13/04/beer-1845272_1280.jpg',
-                location: 'Indiranagar',
-                type: 'Food'
-            }
-        ];
-
-        // In-memory storage for bookings
-        this.bookings = [];
+    /**
+     * Convert GPS coordinates to city/location
+     */
+    gpsToLocation(gps) {
+        if (!gps) return null;
+        
+        const locationMap = {
+            // Mumbai coordinates
+            '18.9220,72.8332': 'Mumbai',
+            '18.9322,72.8264': 'Mumbai',
+            '18.9568,72.8320': 'Mumbai',
+            '18.9633,72.9315': 'Mumbai',
+            
+            // Bangalore coordinates
+            '12.9716,77.5946': 'Bangalore',
+            '12.8456,77.6603': 'Bangalore',
+            '12.9279,77.6271': 'Bangalore',
+            
+            // Delhi coordinates
+            '28.6562,77.2410': 'Delhi',
+            '28.6315,77.2167': 'Delhi',
+            
+            // Goa coordinates
+            '15.5527,73.7603': 'Goa',
+            '15.4013,74.0071': 'Goa',
+            
+            // Chennai coordinates
+            '13.0339,80.2619': 'Chennai',
+            
+            // Hyderabad coordinates
+            '17.3616,78.4747': 'Hyderabad'
+        };
+        
+        return locationMap[gps] || null;
     }
 
     /**
-     * Search for available experiences
+     * Search for available experiences from database
      */
-    async searchExperiences(location, date) {
+    async searchExperiences(location, category, travelDate) {
         try {
-            console.log(`🔍 Searching experiences near ${location} on ${date}`);
+            console.log(`🔍 Searching experiences in ${location}, category: ${category}, date: ${travelDate}`);
 
-            // In a real app, we would query DB with location and date
-            // For now, return all mock data matching city (simplified logic)
-            // Default to Mumbai if no match found for demo
-            // Filter by location (city) if provided
-            let results = this.experiences;
+            // Convert GPS to city if needed
+            const searchCity = this.gpsToLocation(location) || location;
+            
+            console.log(`📍 Searching in city: ${searchCity}`);
 
-            if (location) {
-                const searchCity = location.trim().toLowerCase();
-                // Map common codes to city names if needed
-                const cityMap = {
-                    'blr': 'bangalore',
-                    'del': 'delhi',
-                    'bom': 'mumbai',
-                    'maa': 'chennai'
-                };
-
-                const targetCity = cityMap[searchCity] || searchCity;
-
-                results = this.experiences.filter(exp =>
-                    exp.city.toLowerCase().includes(targetCity) ||
-                    targetCity.includes(exp.city.toLowerCase())
-                );
+            // Build query with optional filtering
+            let query = `
+                SELECT * FROM experiences 
+                WHERE status = 'ACTIVE'
+            `;
+            
+            const queryParams = [];
+            
+            // Add city filter if available
+            if (searchCity) {
+                queryParams.push(`%${searchCity}%`);
+                query += ` AND city ILIKE $${queryParams.length}`;
+            }
+            
+            // Add category filter if available
+            if (category && category !== 'ALL') {
+                queryParams.push(category.toUpperCase());
+                query += ` AND category = $${queryParams.length}`;
+            }
+            
+            query += ` ORDER BY rating DESC, total_reviews DESC, price`;
+            
+            console.log(`📝 Query: ${query}`, queryParams);
+            
+            const result = await db.query(query, queryParams);
+            
+            if (result.rows.length === 0) {
+                console.log('⚠️  No experiences found in database');
+                return this.getEmptyCatalog();
             }
 
-            console.log(`✅ Found ${results.length} experiences`);
+            console.log(`✅ Found ${result.rows.length} experiences in database`);
 
-            // Transform records to Beckn format
-            const items = results.map(exp => {
+            // Transform database records to Beckn format
+            const experiences = result.rows.map(experience => {
                 return {
-                    id: exp.id,
+                    id: `experience-${experience.id}`,
                     descriptor: {
-                        name: exp.name,
-                        code: exp.id,
-                        short_desc: exp.short_desc,
-                        long_desc: exp.long_desc,
-                        images: [{ url: exp.image }]
+                        name: experience.experience_name,
+                        code: experience.experience_code,
+                        short_desc: experience.short_desc || 'Experience service',
+                        long_desc: experience.long_desc || `${experience.experience_name} experience`
                     },
                     price: {
-                        currency: "INR",
-                        value: exp.price
+                        currency: experience.currency || "INR",
+                        value: parseFloat(experience.price).toFixed(2)
                     },
                     category_id: "EXPERIENCE",
-                    fulfillment_id: `fulfillment-${exp.id}`,
-                    location_id: `location-${exp.city.toLowerCase()}`,
+                    fulfillment_id: `fulfillment-${experience.id}`,
+                    location_id: `location-${experience.city.toLowerCase()}`,
                     time: {
                         label: "duration",
-                        duration: exp.duration
+                        duration: `PT${experience.duration_hours}H`
                     },
                     matched: true,
                     tags: [
                         {
+                            code: "EXPERIENCE_TYPE",
+                            list: [
+                                { code: "CATEGORY", value: experience.category },
+                                { code: "SUBCATEGORY", value: experience.subcategory || "N/A" },
+                                { code: "DIFFICULTY", value: experience.difficulty_level || "EASY" }
+                            ]
+                        },
+                        {
                             code: "DETAILS",
                             list: [
-                                { code: "TYPE", value: exp.type },
-                                { code: "DURATION", value: exp.duration },
-                                { code: "RATING", value: exp.rating.toString() }
+                                { code: "DURATION", value: `${experience.duration_hours} hours` },
+                                { code: "MAX_PARTICIPANTS", value: experience.max_participants.toString() },
+                                { code: "MIN_PARTICIPANTS", value: experience.min_participants.toString() },
+                                { code: "AGE_RESTRICTION", value: experience.age_restriction || "ALL_AGES" }
+                            ]
+                        },
+                        {
+                            code: "RATING",
+                            list: [
+                                { code: "AVERAGE", value: (experience.rating || 0).toString() },
+                                { code: "TOTAL_REVIEWS", value: (experience.total_reviews || 0).toString() }
                             ]
                         },
                         {
                             code: "LOCATION",
                             list: [
-                                { code: "CITY", value: exp.city },
-                                { code: "AREA", value: exp.location }
+                                { code: "CITY", value: experience.city },
+                                { code: "AREA", value: experience.location || experience.city },
+                                { code: "GPS", value: experience.gps_coordinates || "" }
                             ]
                         }
                     ]
@@ -183,28 +148,74 @@ class ExperiencesService {
 
             // Create Beckn catalog structure
             const catalog = {
-                descriptor: {
-                    name: "Experiences BPP Provider",
-                    short_desc: "Local experiences provider",
-                    long_desc: "Curated local activities and tours"
+                bpp: {
+                    descriptor: {
+                        name: "Experiences BPP Provider",
+                        short_desc: "Experience booking provider",
+                        long_desc: "Comprehensive experience booking services - tours, activities, and attractions"
+                    },
+                    providers: [
+                        {
+                            id: "experiences-provider-001",
+                            descriptor: {
+                                name: "Travel Experiences Hub",
+                                short_desc: "Multiple experience aggregator",
+                                long_desc: "Access to tours, activities, cultural experiences, and adventures across India"
+                            },
+                            categories: [
+                                {
+                                    id: "EXPERIENCE",
+                                    descriptor: {
+                                        name: "Experience Services"
+                                    }
+                                }
+                            ],
+                            fulfillments: [
+                                {
+                                    id: "fulfillment-001",
+                                    type: "EXPERIENCE",
+                                    start: {
+                                        location: {
+                                            gps: location,
+                                            address: {
+                                                locality: searchCity || "City Center",
+                                                city: searchCity || "Unknown",
+                                                state: "India",
+                                                country: "India"
+                                            }
+                                        },
+                                        time: {
+                                            range: {
+                                                start: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+                                                end: new Date(Date.now() + 2592000000).toISOString() // 30 days from now
+                                            }
+                                        }
+                                    }
+                                }
+                            ],
+                            items: experiences,
+                            locations: [
+                                {
+                                    id: `location-${(searchCity || 'unknown').toLowerCase()}`,
+                                    gps: location,
+                                    address: {
+                                        locality: "City Center",
+                                        city: searchCity || "Unknown",
+                                        state: "India",
+                                        country: "India"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
                 },
                 providers: [
                     {
                         id: "experiences-provider-001",
                         descriptor: {
-                            name: "Local Adventures",
-                            short_desc: "Best local experiences",
-                            long_desc: "Discover the city like a local"
+                            name: "Travel Experiences Hub"
                         },
-                        categories: [
-                            {
-                                id: "EXPERIENCE",
-                                descriptor: {
-                                    name: "Local Experiences"
-                                }
-                            }
-                        ],
-                        items: items
+                        items: experiences
                     }
                 ]
             };
@@ -217,39 +228,217 @@ class ExperiencesService {
         }
     }
 
-    async createBppBooking(bookingDetails) {
-        console.log('📝 Creating BPP booking for experience:', bookingDetails);
-        const booking = {
-            ...bookingDetails,
-            id: bookingDetails.bppBookingId,
-            status: 'CONFIRMED',
-            createdAt: new Date().toISOString()
+    /**
+     * Get empty catalog when no experiences found
+     */
+    getEmptyCatalog() {
+        return {
+            bpp: {
+                descriptor: {
+                    name: "Experiences BPP Provider",
+                    short_desc: "Experience booking provider",
+                    long_desc: "Comprehensive experience booking services across India"
+                },
+                providers: []
+            },
+            providers: []
         };
-        this.bookings.push(booking);
-        return booking;
     }
 
-    async getBppBooking(bookingId) {
-        const booking = this.bookings.find(b => b.id === bookingId);
-        if (!booking) throw new Error('Booking not found');
-        return booking;
+    /**
+     * Create BPP booking in database
+     */
+    async createBppBooking(bookingData) {
+        try {
+            console.log('💾 Creating Experience BPP booking:', {
+                bppBookingId: bookingData.bppBookingId,
+                platformBookingId: bookingData.platformBookingId
+            });
+
+            const query = `
+                INSERT INTO experience_bookings (
+                    booking_id, experience_id, platform_booking_id, participant_name,
+                    participant_email, participant_phone, number_of_participants,
+                    booking_date, time_slot, total_amount, booking_status,
+                    participant_details, beckn_transaction_id, beckn_message_id
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                RETURNING *
+            `;
+
+            const values = [
+                bookingData.bppBookingId,
+                bookingData.experienceId,
+                bookingData.platformBookingId,
+                bookingData.participantName,
+                bookingData.participantEmail,
+                bookingData.participantPhone,
+                bookingData.numberOfParticipants,
+                bookingData.bookingDate,
+                bookingData.timeSlot,
+                bookingData.totalAmount,
+                bookingData.bookingStatus || 'CONFIRMED',
+                JSON.stringify(bookingData.participantDetails || []),
+                bookingData.becknTransactionId,
+                bookingData.becknMessageId
+            ];
+
+            const result = await db.query(query, values);
+            
+            console.log('✅ Experience BPP booking created successfully:', {
+                id: result.rows[0].id,
+                bppBookingId: result.rows[0].booking_id
+            });
+
+            return result.rows[0];
+
+        } catch (error) {
+            console.error('❌ Error creating Experience BPP booking:', error);
+            throw new Error(`Failed to create Experience BPP booking: ${error.message}`);
+        }
     }
 
-    async updateBookingForCancellation({ bppBookingId, cancellationReason, cancellationCharges, refundAmount }) {
-        const index = this.bookings.findIndex(b => b.id === bppBookingId);
-        if (index === -1) throw new Error('Booking not found');
+    /**
+     * Get BPP booking by ID
+     */
+    async getBppBooking(bppBookingId) {
+        try {
+            const query = `
+                SELECT eb.*, e.experience_name, e.experience_code, e.city, e.category, e.provider_name
+                FROM experience_bookings eb
+                LEFT JOIN experiences e ON eb.experience_id = e.id
+                WHERE eb.booking_id = $1
+            `;
 
-        this.bookings[index] = {
-            ...this.bookings[index],
-            status: 'CANCELLED',
-            cancellationReason,
-            cancellationCharges,
-            refundAmount,
-            updatedAt: new Date().toISOString()
-        };
-        return this.bookings[index];
+            const result = await db.query(query, [bppBookingId]);
+            
+            if (result.rows.length === 0) {
+                throw new Error(`Experience BPP booking not found: ${bppBookingId}`);
+            }
+
+            return result.rows[0];
+
+        } catch (error) {
+            console.error('❌ Error getting Experience BPP booking:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Update booking for cancellation
+     */
+    async updateBookingForCancellation(updateData) {
+        try {
+            console.log('💾 Updating experience booking for cancellation:', {
+                bppBookingId: updateData.bppBookingId,
+                cancellationReason: updateData.cancellationReason
+            });
+
+            const query = `
+                UPDATE experience_bookings 
+                SET 
+                    booking_status = 'CANCELLED',
+                    cancellation_status = 'CANCELLED',
+                    cancellation_reason = $2,
+                    cancellation_time = $3,
+                    cancellation_charges = $4,
+                    refund_amount = $5,
+                    refund_status = 'PROCESSING',
+                    refund_id = $6,
+                    updated_at = $7
+                WHERE booking_id = $1
+                RETURNING *
+            `;
+
+            const refundId = `EXP-REF-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+            
+            const values = [
+                updateData.bppBookingId,
+                updateData.cancellationReason,
+                new Date().toISOString(),
+                updateData.cancellationCharges || 0,
+                updateData.refundAmount,
+                refundId,
+                new Date().toISOString()
+            ];
+
+            const result = await db.query(query, values);
+            
+            if (result.rows.length === 0) {
+                throw new Error(`Experience BPP booking not found for cancellation: ${updateData.bppBookingId}`);
+            }
+
+            console.log('✅ Experience BPP booking updated for cancellation:', {
+                bppBookingId: result.rows[0].booking_id,
+                refundId: result.rows[0].refund_id
+            });
+
+            return result.rows[0];
+
+        } catch (error) {
+            console.error('❌ Error updating Experience BPP booking for cancellation:', error);
+            throw new Error(`Failed to update Experience BPP booking for cancellation: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Get booking status
+     */
+    async getBookingStatus(bppBookingId) {
+        try {
+            const booking = await this.getBppBooking(bppBookingId);
+            
+            return {
+                id: booking.booking_id,
+                platformBookingId: booking.platform_booking_id,
+                status: booking.booking_status,
+                cancellationStatus: booking.cancellation_status,
+                refundStatus: booking.refund_status,
+                refundAmount: parseFloat(booking.refund_amount || 0),
+                cancellationReason: booking.cancellation_reason,
+                bookingDetails: {
+                    participantName: booking.participant_name,
+                    participantEmail: booking.participant_email,
+                    numberOfParticipants: booking.number_of_participants,
+                    bookingDate: booking.booking_date,
+                    timeSlot: booking.time_slot,
+                    experienceInfo: {
+                        experienceName: booking.experience_name,
+                        experienceCode: booking.experience_code,
+                        city: booking.city,
+                        category: booking.category,
+                        providerName: booking.provider_name
+                    }
+                }
+            };
+        } catch (error) {
+            console.error('❌ Error getting experience booking status:', error);
+            throw error;
+        }
     }
 
+    /**
+     * Get experience details by ID
+     */
+    async getExperienceById(experienceId) {
+        try {
+            const query = `
+                SELECT * FROM experiences 
+                WHERE id = $1 AND status = 'ACTIVE'
+            `;
+
+            const result = await db.query(query, [experienceId]);
+            
+            if (result.rows.length === 0) {
+                throw new Error(`Experience not found: ${experienceId}`);
+            }
+
+            return result.rows[0];
+
+        } catch (error) {
+            console.error('❌ Error getting experience details:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new ExperiencesService();

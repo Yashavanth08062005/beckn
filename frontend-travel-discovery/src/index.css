@@ -24,4 +24,50 @@
   .card {
     @apply bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-6;
   }
+
+  /* Experience-specific styles */
+  .experience-card {
+    @apply bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-blue-200;
+  }
+  
+  .experience-price {
+    @apply text-blue-600 font-bold text-xl;
+  }
+  
+  .experience-rating {
+    @apply text-yellow-500;
+  }
+  
+  .experience-category {
+    @apply bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .experience-button {
+    @apply bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg;
+  }
+
+  /* Brand color utilities using rgb(37 99 235) */
+  .bg-brand {
+    background-color: rgb(37 99 235);
+  }
+  
+  .text-brand {
+    color: rgb(37 99 235);
+  }
+  
+  .border-brand {
+    border-color: rgb(37 99 235);
+  }
+  
+  .hover\:bg-brand:hover {
+    background-color: rgb(29 78 216); /* Darker shade for hover */
+  }
+  
+  .hover\:text-brand:hover {
+    color: rgb(37 99 235);
+  }
+  
+  .focus\:ring-brand:focus {
+    --tw-ring-color: rgb(37 99 235 / 0.5);
+  }
 }

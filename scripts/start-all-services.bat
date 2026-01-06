@@ -1,12 +1,13 @@
 @echo off
 echo Starting Beckn Travel Discovery Platform...
 echo.
-echo This will open 5 terminal windows for each service:
+echo This will open 6 terminal windows for each service:
 echo 1. BAP Service (Port 8081)
 echo 2. Flights BPP (Port 7001) 
 echo 3. International Flights BPP (Port 7005)
 echo 4. Hotels BPP (Port 7003)
-echo 5. Frontend (Port 3000)
+echo 5. Experiences BPP (Port 7004)
+echo 6. Frontend (Port 3000)
 echo.
 echo Make sure PostgreSQL is running before continuing!
 pause
@@ -33,6 +34,11 @@ start "Hotels BPP (Port 7003)" cmd /k "cd travel-discovery-bpp-hotels && npm sta
 
 timeout /t 2
 
+echo Starting Experiences BPP...
+start "Experiences BPP (Port 7004)" cmd /k "cd travel-discovery-bpp-experiences && npm start"
+
+timeout /t 2
+
 echo Starting Frontend...
 start "Frontend (Port 3000)" cmd /k "cd frontend-travel-discovery && npm run dev"
 
@@ -42,6 +48,7 @@ echo.
 echo Wait for all services to start, then open:
 echo Frontend: http://localhost:3000
 echo BAP API: http://localhost:8081/health
+echo Experiences BPP: http://localhost:7004/health
 echo.
 echo Press any key to exit this window...
 pause > nul
