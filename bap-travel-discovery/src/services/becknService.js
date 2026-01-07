@@ -29,7 +29,7 @@ class BecknService {
         return {
             domain: "mobility",
             country: "IND",
-            city: "std:080", // Bangalore city code
+            city: "std:080", 
             action: action,
             core_version: "1.1.0",
             bap_id: this.bapId,
